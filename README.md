@@ -31,6 +31,7 @@ This is part of the challenge’s goal to demonstrate hands-on experience with r
 {
   "visits": 42
 }
+```
 
 ---
 
@@ -45,3 +46,90 @@ Table name: visitor_count
 Partition key: id (String)
 
 Create the table, then manually insert an item:
+```json
+{
+  "id": "count",
+  "visits": 0
+}
+```
+
+---
+
+## 2️⃣ Create Lambda Function
+Go to Lambda → Create function
+
+Name: UpdateVisitorCount
+
+Runtime: Python 3.x
+
+Use the code from lambda_function.py in this repo
+
+Add environment variables if needed
+
+✅ Permissions:
+
+Attach AmazonDynamoDBFullAccess for testing (restrict later)
+
+3️⃣ Create API Gateway
+Go to API Gateway → Create HTTP API
+
+Add integration: select your Lambda function
+
+Route: POST /UpdateVisitorCount
+
+Enable CORS (for browser access later)
+
+Deploy to the default stage ($default)
+
+4️⃣ Test Your API
+You can test the deployed endpoint using Postman or curl:
+
+Method: POST
+
+URL: https://<api-id>.execute-api.<region>.amazonaws.com/UpdateVisitorCount
+
+Body:
+
+```json
+{}
+Expected response:
+```
+
+```json
+{
+  "visits": 1
+}
+```
+
+---
+
+## 🤖 How To Deploy (Automatically via GitHub Actions) – Coming Soon
+I'll be adding a GitHub Actions workflow to automatically deploy changes to Lambda whenever I push to this repo.
+
+This will involve:
+
+Creating an IAM user for GitHub Actions
+
+Adding AWS credentials as GitHub secrets
+
+Writing a .github/workflows/deploy.yml CI/CD pipeline
+
+---
+
+## 🧠 Lessons Learned
+This chunk of the Cloud Resume Challenge taught me:
+
+How to connect AWS services using IAM and event-driven design
+
+How to write clean Python code using the boto3 SDK
+
+How to expose secure APIs via API Gateway
+
+And perhaps most importantly — how to get “real world” experience building cloud-native applications, even in a personal project.
+
+---
+
+## ✍️ Author
+Hi! I'm Kerem Kirci, 
+
+👉 Visit my resume site https://hybridmulti.cloud
