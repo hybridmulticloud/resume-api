@@ -27,7 +27,8 @@ Every time someone visits the website, this Python function is triggered by an H
 {
   "visits": 78
 }
-🚀 How To Deploy (Manually)
+
+##🚀 How To Deploy (Manually)
 Create a DynamoDB table named visitor_count
 
 Partition key: id (String)
