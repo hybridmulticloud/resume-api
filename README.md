@@ -92,8 +92,9 @@ Body:
 
 ```json
 {}
-Expected response:
 ```
+
+Expected response:
 
 ```json
 {
