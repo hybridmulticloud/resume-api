@@ -1,23 +1,27 @@
-# resume-api
-# Cloud Resume Challenge – Visitor Counter API
+# ☁️ Cloud Resume Challenge – Visitor Counter API
 
-This is the backend code for the **Cloud Resume Challenge**, specifically the **API and database layer** that tracks how many people have viewed the resume website.
+Welcome! This repository contains the backend code for my https://hybridmulti.cloud/ project — a serverless visitor counter API built on AWS.
 
-It’s built using 100% serverless AWS services — no servers, no containers, just clean and simple cloud-native infrastructure.
+It leverages **Lambda**, **API Gateway**, and **DynamoDB** to count and return the number of visitors to my resume website in real time.
 
 ---
 
 ## 📦 What This Code Does
 
-Every time someone visits the website, this Python function is triggered by an HTTP API call. It talks to DynamoDB and increments a counter by 1. The new count is then returned as a JSON response.
+When someone visits my website, this Lambda function is triggered via an API Gateway endpoint. It connects to DynamoDB, increments a counter, and returns the updated count to the frontend.
+
+This is part of the challenge’s goal to demonstrate hands-on experience with real cloud infrastructure — including infrastructure as code, CI/CD, and serverless development.
 
 ---
 
-## ⚙️ How It Works
+## ⚙️ Tech Stack
 
-- **AWS Lambda**: Runs the Python function
-- **Amazon DynamoDB**: Stores the visit count (`visits`)
-- **API Gateway (HTTP API)**: Exposes the Lambda to the web as a RESTful POST endpoint
+- **AWS Lambda** – Runs the Python function
+- **Amazon DynamoDB** – Stores the visitor count
+- **API Gateway (HTTP API)** – Exposes the API to the web
+- **Python 3.x** – Used for the backend logic (`boto3` SDK)
+- **GitHub** – Source control and CI/CD
+- **GitHub Actions** – Automates deployment (coming soon)
 
 ---
 
@@ -25,63 +29,19 @@ Every time someone visits the website, this Python function is triggered by an H
 
 ```json
 {
-  "visits": 78
+  "visits": 42
 }
-
----
-
----
-
-## ⚙️ How It Works
-
-- **AWS Lambda**: Runs the Python function
-- **Amazon DynamoDB**: Stores the visit count (`visits`)
-- **API Gateway (HTTP API)**: Exposes the Lambda to the web as a RESTful POST endpoint
 
 ---
 
 ## 🚀 How To Deploy (Manually)
-Create a DynamoDB table named visitor_count
+This walkthrough assumes you’re setting up everything via the AWS Console. Automation via GitHub Actions will be added later.
+
+1️⃣ Create DynamoDB Table
+Go to DynamoDB → Create table
+
+Table name: visitor_count
 
 Partition key: id (String)
 
-Add item:
-
-json
-Copy
-Edit
-{
-  "id": "count",
-  "visits": 0
-}
-Create a Lambda function in the AWS Console
-
-Use lambda_function.py as the code
-
-Attach IAM role with AmazonDynamoDBFullAccess (or restrict it properly)
-
-Create an HTTP API in API Gateway
-
-Route: POST /UpdateVisitorCount
-
-Integration: Lambda function
-
-Enable CORS
-
----
-
-## 🛠 Tech Stack
-Python 3.x
-
-AWS Lambda
-
-DynamoDB
-
-API Gateway (HTTP API)
-
-GitHub (for source control)
-
----
-
-## ✍️ Author
-Built with care as part of the Cloud Resume Challenge.
+Create the table, then manually insert an item:
