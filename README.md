@@ -27,3 +27,44 @@ Every time someone visits the website, this Python function is triggered by an H
 {
   "visits": 78
 }
+🚀 How To Deploy (Manually)
+Create a DynamoDB table named visitor_count
+
+Partition key: id (String)
+
+Add item:
+
+json
+Copy
+Edit
+{
+  "id": "count",
+  "visits": 0
+}
+Create a Lambda function in the AWS Console
+
+Use lambda_function.py as the code
+
+Attach IAM role with AmazonDynamoDBFullAccess (or restrict it properly)
+
+Create an HTTP API in API Gateway
+
+Route: POST /UpdateVisitorCount
+
+Integration: Lambda function
+
+Enable CORS
+
+🛠 Tech Stack
+Python 3.x
+
+AWS Lambda
+
+DynamoDB
+
+API Gateway (HTTP API)
+
+GitHub (for source control)
+
+✍️ Author
+Built with care as part of the Cloud Resume Challenge.
