@@ -1,0 +1,34 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+.env
+venv/
+ENV/
+env/
+
+# AWS credentials (never commit these!)
+.aws/
+*.pem
+
+# VS Code or IDE configs
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and output
+*.log
+
+# Python egg metadata
+*.egg-info/
+dist/
+build/
+
+# Zip archives for Lambda packaging
+*.zip
