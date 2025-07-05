@@ -30,6 +30,16 @@ Every time someone visits the website, this Python function is triggered by an H
 
 ---
 
+---
+
+## ⚙️ How It Works
+
+- **AWS Lambda**: Runs the Python function
+- **Amazon DynamoDB**: Stores the visit count (`visits`)
+- **API Gateway (HTTP API)**: Exposes the Lambda to the web as a RESTful POST endpoint
+
+---
+
 ## 🚀 How To Deploy (Manually)
 Create a DynamoDB table named visitor_count
 
