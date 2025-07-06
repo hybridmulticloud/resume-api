@@ -33,9 +33,8 @@ resource "aws_lambda_function" "update_visitor_count" {
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
 
-  s3_bucket         = aws_s3_bucket.lambda_bucket.bucket
-  s3_key            = aws_s3_bucket_object.lambda_zip.key
-  source_code_hash  = filebase64sha256("${path.module}/lambda_function.zip")
+s3_bucket = "resume-api-lambda-bucket"
+s3_key    = "lambda_function.zip"
 
   depends_on = [aws_iam_role_policy_attachment.lambda_policy_attach]
 }
