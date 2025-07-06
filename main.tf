@@ -47,15 +47,15 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda Function
+# Lambda Function from S3
 resource "aws_lambda_function" "visitor_counter" {
   function_name = var.lambda_function_name
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
   role          = aws_iam_role.lambda_exec_role.arn
-  filename      = "lambda_function.zip"
-  # Commented out to avoid error when file doesn't exist locally
-  # source_code_hash = filebase64sha256("lambda_function.zip")
+  s3_bucket     = var.lambda_s3_bucket
+  s3_key        = var.lambda_s3_key
+  source_code_hash = filebase64sha256("${path.module}/lambda_function.zip")
   timeout       = 10
 
   environment {
@@ -73,10 +73,10 @@ resource "aws_apigatewayv2_api" "http_api" {
 
 # API Integration
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id                = aws_apigatewayv2_api.http_api.id
-  integration_type      = "AWS_PROXY"
-  integration_uri       = aws_lambda_function.visitor_counter.invoke_arn
-  integration_method    = "POST"
+  api_id           = aws_apigatewayv2_api.http_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.visitor_counter.invoke_arn
+  integration_method = "POST"
   payload_format_version = "2.0"
 }
 
