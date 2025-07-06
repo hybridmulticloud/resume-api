@@ -79,5 +79,12 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Wait for S3 object to propagate
+        run: |
+          echo "Waiting for lambda_function.zip to be available..."
+          for i in {1..10}; do
+            aws s3api head-object --bucket "$LAMBDA_BUCKET" --key "lambda_function.zip" && break || sleep 3
+          done
+
       - name: Terraform Apply Full Infra
         run: terraform apply -auto-approve
