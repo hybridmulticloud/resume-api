@@ -1,10 +1,10 @@
-# Byte-compiled / cache files
+# Python byte-compiled / cache files
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 
-# Virtual environment
+# Python virtual environments
 .env
 venv/
 ENV/
@@ -14,7 +14,7 @@ env/
 .aws/
 *.pem
 
-# VS Code or IDE configs
+# IDE configs
 .vscode/
 .idea/
 
@@ -32,3 +32,10 @@ build/
 
 # Zip archives for Lambda packaging
 *.zip
+lambda_function.zip
+
+# Terraform state and cache
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
