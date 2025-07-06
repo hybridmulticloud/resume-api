@@ -7,9 +7,11 @@ output "dynamodb_table_name" {
 }
 
 output "lambda_s3_bucket" {
-  value = aws_s3_bucket.lambda_bucket.bucket
+  description = "Name of the S3 bucket for Lambda"
+  value       = aws_s3_bucket.lambda_bucket.bucket
 }
+
 output "api_endpoint" {
-  description = "The HTTP endpoint for the Lambda function"
+  description = "API Gateway endpoint URL"
   value       = aws_apigatewayv2_api.lambda_api.api_endpoint
 }
