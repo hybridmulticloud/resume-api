@@ -15,5 +15,5 @@ variable "dynamodb_table_name" {
 
 variable "lambda_runtime" {
   description = "Lambda function runtime"
-  default     = "python3.13"
+  default     = "python3.11"
 }
