@@ -1,8 +1,3 @@
-variable "aws_region" {
-  description = "AWS Region to deploy resources"
-  type        = string
-}
-
 variable "project_name" {
   default = "resume-api"
 }
