@@ -1,5 +1,6 @@
 output "api_gateway_url" {
-  value = aws_apigatewayv2_stage.lambda_stage.invoke_url
+  description = "Invoke URL for API Gateway"
+  value       = "${aws_apigatewayv2_api.lambda_api.api_endpoint}/UpdateVisitorCount"
 }
 
 output "dynamodb_table_name" {
