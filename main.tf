@@ -6,14 +6,6 @@ resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.project_name}-lambda-bucket"
 }
 
-# Upload Lambda ZIP to S3
-resource "aws_s3_bucket_object" "lambda_zip" {
-  bucket = aws_s3_bucket.lambda_bucket.bucket
-  key    = "lambda_function.zip"
-  source = "${path.module}/lambda_function.zip"
-  etag   = filemd5("${path.module}/lambda_function.zip")
-}
-
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.project_name}-lambda-exec-role"
