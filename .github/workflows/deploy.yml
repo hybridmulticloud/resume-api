@@ -36,7 +36,7 @@ jobs:
           echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
 
       - name: Upload zip to S3
-        run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda/function.zip
+        run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
