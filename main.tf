@@ -70,8 +70,8 @@ resource "aws_lambda_function" "visitor_counter" {
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
   role          = aws_iam_role.lambda_exec_role.arn
-  s3_bucket     = var.lambda_s3_bucket
-  s3_key        = var.lambda_s3_key
+  s3_bucket     = aws_s3_bucket.lambda_bucket.id
+  s3_key        = aws_s3_object.lambda_zip.key
   source_code_hash = filebase64sha256("${path.module}/lambda_function.zip")
   timeout       = 10
 
