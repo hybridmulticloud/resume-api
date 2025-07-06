@@ -3,7 +3,8 @@ output "api_gateway_url" {
 }
 
 output "dynamodb_table_name" {
-  value = aws_dynamodb_table.visitors.name
+  description = "DynamoDB table for counting visitors"
+  value       = aws_dynamodb_table.visitor_count.name
 }
 
 output "lambda_s3_bucket" {
