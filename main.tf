@@ -1,36 +1,17 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
 provider "aws" {
   region = var.aws_region
 }
 
-# Create S3 bucket to store Lambda zip
-resource "aws_s3_bucket" "lambda_bucket" {
-  bucket        = "${var.project_name}-lambda-bucket"
-  force_destroy = true
+# Upload zipped Lambda to S3
+resource "aws_s3_bucket_object" "lambda_zip" {
+  bucket = "resume-api-lambda-bucket"
+  key    = "lambda.zip"
+  source = "${path.module}/lambda.zip"
+  etag   = filemd5("${path.module}/lambda.zip")
 }
 
-# DynamoDB Table
-resource "aws_dynamodb_table" "visitors" {
-  name         = var.dynamodb_table_name
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
-
-  attribute {
-    name = "id"
-    type = "S"
-  }
-}
-
-# IAM Role for Lambda Execution
-resource "aws_iam_role" "lambda_exec_role" {
+# IAM Role for Lambda
+resource "aws_iam_role" "lambda_exec" {
   name = "lambda-exec-role"
 
   assume_role_policy = jsonencode({
@@ -45,63 +26,102 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# Attach managed policy for logging
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_exec_role.name
+# Attach basic execution policy
+resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
+  role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda function — points to uploaded S3 object
-resource "aws_lambda_function" "visitor_counter" {
-  function_name = var.lambda_function_name
+# Lambda Function
+resource "aws_lambda_function" "update_visitor_count" {
+  function_name = "UpdateVisitorCount"
+  role          = aws_iam_role.lambda_exec.arn
   handler       = "lambda_function.lambda_handler"
-  runtime       = var.lambda_runtime
-  role          = aws_iam_role.lambda_exec_role.arn
-  s3_bucket     = aws_s3_bucket.lambda_bucket.bucket
-  s3_key        = "lambda_function.zip"
-  timeout       = 10
+  runtime       = "python3.10"
 
-  environment {
-    variables = {
-      TABLE_NAME = aws_dynamodb_table.visitors.name
-    }
+  s3_bucket         = "resume-api-lambda-bucket"
+  s3_key            = aws_s3_bucket_object.lambda_zip.key
+  source_code_hash  = filebase64sha256("${path.module}/lambda.zip")
+
+  depends_on = [aws_iam_role_policy_attachment.lambda_policy_attach]
+}
+
+# DynamoDB Table
+resource "aws_dynamodb_table" "visitor_count" {
+  name         = "visitor_count"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
   }
 }
 
-# HTTP API Gateway
-resource "aws_apigatewayv2_api" "http_api" {
-  name          = "visitor-api"
+# Null resource to seed table (only if item is missing)
+resource "null_resource" "seed_dynamodb" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Checking if DynamoDB item exists..."
+
+      ITEM_EXISTS=$(aws dynamodb get-item \
+        --table-name visitor_count \
+        --key '{"id": {"S": "count"}}' \
+        --region ${var.aws_region} \
+        --query 'Item.id.S' \
+        --output text 2>/dev/null)
+
+      if [ "$ITEM_EXISTS" = "count" ]; then
+        echo "Item already exists — skipping insert."
+      else
+        echo "Item missing — inserting initial count..."
+        aws dynamodb put-item \
+          --table-name visitor_count \
+          --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
+          --region ${var.aws_region}
+      fi
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+
+  triggers = {
+    always_run = uuid()
+  }
+
+  depends_on = [aws_dynamodb_table.visitor_count]
+}
+
+# API Gateway setup
+resource "aws_apigatewayv2_api" "lambda_api" {
+  name          = "VisitorCounterAPI"
   protocol_type = "HTTP"
 }
 
-# Lambda integration with API Gateway
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id                 = aws_apigatewayv2_api.http_api.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.visitor_counter.invoke_arn
-  integration_method     = "POST"
+  api_id                = aws_apigatewayv2_api.lambda_api.id
+  integration_type      = "AWS_PROXY"
+  integration_uri       = aws_lambda_function.update_visitor_count.invoke_arn
+  integration_method    = "POST"
   payload_format_version = "2.0"
 }
 
-# Define route
-resource "aws_apigatewayv2_route" "default_route" {
-  api_id    = aws_apigatewayv2_api.http_api.id
+resource "aws_apigatewayv2_route" "lambda_route" {
+  api_id    = aws_apigatewayv2_api.lambda_api.id
   route_key = "POST /UpdateVisitorCount"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
 
-# Enable default deployment stage
-resource "aws_apigatewayv2_stage" "lambda_stage" {
-  api_id      = aws_apigatewayv2_api.http_api.id
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.lambda_api.id
   name        = "$default"
   auto_deploy = true
 }
 
-# Allow API Gateway to invoke Lambda
-resource "aws_lambda_permission" "api_gateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
+# Lambda permission for API Gateway to invoke
+resource "aws_lambda_permission" "apigw_invoke_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.visitor_counter.function_name
+  function_name = aws_lambda_function.update_visitor_count.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+  source_arn    = "${aws_apigatewayv2_api.lambda_api.execution_arn}/*/*"
 }
