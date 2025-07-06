@@ -13,7 +13,7 @@ def lambda_handler(event, context):
         ExpressionAttributeValues={':inc': 1},
         ReturnValues='UPDATED_NEW'
     )
-    
+
     # Return the updated visit count as JSON
     return {
         'statusCode': 200,
