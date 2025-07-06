@@ -3,7 +3,7 @@ import boto3
 
 # Connect to DynamoDB
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('visitor_count')
+table = dynamodb.Table('VisitorCount')
 
 def lambda_handler(event, context):
     response = table.update_item(
