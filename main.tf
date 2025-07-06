@@ -1,6 +1,4 @@
-provider "aws" {
-  region = var.aws_region
-}
+provider "aws" 
 
 # S3 Bucket for Lambda ZIP
 resource "aws_s3_bucket" "lambda_bucket" {
