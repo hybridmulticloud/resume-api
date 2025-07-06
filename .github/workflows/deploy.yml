@@ -15,29 +15,28 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.x'
 
       - name: Zip Lambda function
         run: zip lambda_function.zip lambda_function.py
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Upload ZIP to S3
-        run: |
-          BUCKET=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'resume-lambda')].Name" --output text | head -n1)
-          aws s3 cp lambda_function.zip s3://$BUCKET/lambda_function.zip
-        shell: bash
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-
       - name: Terraform Init
         run: terraform init
+
+      - name: Get Terraform Output for Bucket
+        id: bucket
+        run: |
+          echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
+
+      - name: Upload zip to S3
+        run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda/function.zip
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
