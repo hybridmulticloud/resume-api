@@ -6,7 +6,6 @@ dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('visitor_count')
 
 def lambda_handler(event, context):
-    # Increment the visit counter stored in DynamoDB
     response = table.update_item(
         Key={'id': 'count'},
         UpdateExpression='SET visits = visits + :inc',
@@ -14,7 +13,6 @@ def lambda_handler(event, context):
         ReturnValues='UPDATED_NEW'
     )
 
-    # Return the updated visit count as JSON
     return {
         'statusCode': 200,
         'headers': {
