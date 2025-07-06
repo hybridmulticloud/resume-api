@@ -5,7 +5,30 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  provision-s3:
+    name: Provision S3 Bucket
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Apply Terraform (S3 Only)
+        run: terraform apply -auto-approve -target=aws_s3_bucket.lambda_bucket
+
+  deploy-lambda:
+    name: Deploy Lambda & Infra
+    needs: provision-s3
     runs-on: ubuntu-latest
 
     steps:
@@ -25,21 +48,17 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: AWS_REGION
+          aws-region: us-east-1
 
       - name: Terraform Init
         run: terraform init
 
-      - name: Create S3 Bucket Only
-        run: terraform apply -auto-approve -target=aws_s3_bucket.lambda_bucket
-
-      - name: Get S3 Bucket Output
+      - name: Get Terraform Output for Bucket
         id: bucket
-        run: |
-          echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
+        run: echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
 
-      - name: Upload zip to S3
+      - name: Upload Lambda to S3
         run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
-      - name: Terraform Apply All
+      - name: Terraform Apply (Full Infra)
         run: terraform apply -auto-approve
