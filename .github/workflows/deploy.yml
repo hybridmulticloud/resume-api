@@ -60,6 +60,10 @@ jobs:
       - name: Upload Lambda zip to S3
         run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
+      - name: List S3 contents
+        run: aws s3 ls s3://$LAMBDA_BUCKET/
+
+
   deploy_lambda_infra:
     name: Deploy Remaining Infra
     runs-on: ubuntu-latest
