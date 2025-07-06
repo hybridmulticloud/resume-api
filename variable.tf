@@ -18,11 +18,17 @@ variable "lambda_runtime" {
   default     = "python3.11"
 }
 variable "lambda_s3_bucket" {
-  description = "S3 bucket containing the Lambda function ZIP"
+  description = "Name for the S3 bucket to store Lambda ZIP"
   type        = string
+  default     = "my-lambda-zip-bucket-${random_id.suffix.hex}"
 }
 
 variable "lambda_s3_key" {
-  description = "S3 key (path) to the Lambda function ZIP file"
+  description = "Path (key) in S3 bucket for Lambda ZIP"
   type        = string
+  default     = "lambda_function.zip"
+}
+
+resource "random_id" "suffix" {
+  byte_length = 4
 }
