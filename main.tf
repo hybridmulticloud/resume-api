@@ -47,7 +47,24 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+
 # Lambda Function from S3
+resource "aws_s3_bucket" "lambda_bucket" {
+  bucket = var.lambda_s3_bucket
+  force_destroy = true
+
+  tags = {
+    Name = "Lambda Deployment Bucket"
+    Environment = "Terraform"
+  }
+}
+
+resource "aws_s3_object" "lambda_zip" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+  key    = var.lambda_s3_key
+  source = "${path.module}/lambda_function.zip"
+  etag   = filemd5("${path.module}/lambda_function.zip")
+}
 resource "aws_lambda_function" "visitor_counter" {
   function_name = var.lambda_function_name
   handler       = "lambda_function.lambda_handler"
