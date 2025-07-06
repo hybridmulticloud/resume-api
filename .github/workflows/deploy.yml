@@ -1,32 +1,19 @@
-name: Deploy Lambda to AWS
+name: Deploy Lambda with Terraform
 
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy:
-    name: Terraform Lambda Deploy
+  terraform_apply_bucket:
+    name: Create S3 Bucket
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.4
-
-      - name: Zip Lambda code
-        run: zip lambda.zip lambda_function.py
-
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -36,11 +23,43 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Validate
-        run: terraform validate
+      - name: Apply S3 Bucket Only
+        run: terraform apply -target=aws_s3_bucket.lambda_bucket -auto-approve -var="aws_region=${{ secrets.AWS_REGION }}"
 
-      - name: Terraform Plan
-        run: terraform plan -var="aws_region=${{ secrets.AWS_REGION }}"
+  deploy_lambda:
+    name: Upload Lambda & Deploy Infra
+    runs-on: ubuntu-latest
+    needs: terraform_apply_bucket
 
-      - name: Terraform Apply
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Zip Lambda function
+        run: zip lambda_function.zip lambda_function.py
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Upload Lambda zip to S3
+        run: |
+          echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
+          aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
+
+      - name: Confirm Lambda zip in S3
+        run: aws s3 ls s3://$LAMBDA_BUCKET/lambda_function.zip
+
+      - name: Terraform Apply Full Infra
         run: terraform apply -auto-approve -var="aws_region=${{ secrets.AWS_REGION }}"
