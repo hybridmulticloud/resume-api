@@ -28,14 +28,18 @@ jobs:
           aws-region: AWS_REGION
 
       - name: Terraform Init
-      run: terraform init
+        run: terraform init
 
-      - name: Get Terraform Output for Bucket
+      - name: Create S3 Bucket Only
+        run: terraform apply -auto-approve -target=aws_s3_bucket.lambda_bucket
+
+      - name: Get S3 Bucket Output
         id: bucket
-        run: echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
+        run: |
+          echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
 
       - name: Upload zip to S3
-       run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
+        run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
-      - name: Terraform Apply
-      run: terraform apply -auto-approve
+      - name: Terraform Apply All
+        run: terraform apply -auto-approve
