@@ -20,13 +20,14 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
+resource "aws_iam_role_policy_attachment" "lambda_basic_exec" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_policy" "lambda_dynamodb_policy" {
-  name        = "${var.project_name}-lambda-dynamodb-access"
+resource "aws_iam_role_policy" "lambda_inline_dynamodb" {
+  name = "inline-dynamodb-access"
+  role = aws_iam_role.lambda_exec.id
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -37,15 +38,10 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
           "dynamodb:UpdateItem",
           "dynamodb:GetItem"
         ],
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attach" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
 
 resource "aws_lambda_function" "update_visitor_count" {
@@ -58,8 +54,8 @@ resource "aws_lambda_function" "update_visitor_count" {
   s3_key    = "lambda_function.zip"
 
   depends_on = [
-    aws_iam_role_policy_attachment.lambda_policy_attach,
-    aws_iam_role_policy_attachment.lambda_dynamodb_attach
+    aws_iam_role_policy_attachment.lambda_basic_exec,
+    aws_iam_role_policy.lambda_inline_dynamodb
   ]
 }
 
@@ -80,7 +76,7 @@ resource "null_resource" "seed_dynamodb" {
       ITEM_EXISTS=$(aws dynamodb get-item \
         --table-name ${var.dynamodb_table_name} \
         --key '{"id": {"S": "count"}}' \
-        --region ${data.aws_region.current.name} \
+        --region ${data.aws_region.current.id} \
         --query 'Item.id.S' \
         --output text 2>/dev/null)
 
@@ -91,7 +87,7 @@ resource "null_resource" "seed_dynamodb" {
         aws dynamodb put-item \
           --table-name ${var.dynamodb_table_name} \
           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
-          --region ${data.aws_region.current.name}
+          --region ${data.aws_region.current.id}
       fi
     EOT
     interpreter = ["/bin/bash", "-c"]
