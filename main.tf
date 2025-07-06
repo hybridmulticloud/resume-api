@@ -52,8 +52,8 @@ resource "aws_lambda_function" "visitor_counter" {
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
   role          = aws_iam_role.lambda_exec_role.arn
-  s3_bucket     = aws_s3_bucket.lambda_bucket.id
-  s3_key        = "lambda_function.zip"
+  s3_bucket     = aws_s3_bucket.lambda_bucket.bucket  
+  s3_key        = "lambda_function.zip"               
   timeout       = 10
 
   environment {
