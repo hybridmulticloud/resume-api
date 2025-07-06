@@ -66,7 +66,7 @@ resource "null_resource" "seed_dynamodb" {
       ITEM_EXISTS=$(aws dynamodb get-item \
         --table-name ${var.dynamodb_table_name} \
         --key '{"id": {"S": "count"}}' \
-        --region ${var.aws_region} \
+        --region $AWS_REGION \
         --query 'Item.id.S' \
         --output text 2>/dev/null)
 
@@ -77,7 +77,7 @@ resource "null_resource" "seed_dynamodb" {
         aws dynamodb put-item \
           --table-name ${var.dynamodb_table_name} \
           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
-          --region ${var.aws_region}
+          --region $AWS_REGION
       fi
     EOT
     interpreter = ["/bin/bash", "-c"]
