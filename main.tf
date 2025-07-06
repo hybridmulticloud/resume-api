@@ -1,12 +1,12 @@
-provider "aws" { 
-}
+provider "aws" {}
 
-# S3 Bucket for Lambda ZIP
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.project_name}-lambda-bucket"
 }
 
-# IAM Role for Lambda
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.project_name}-lambda-exec-role"
 
@@ -20,7 +20,6 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-# Attach execution policy
 resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -28,8 +27,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
 
 resource "aws_iam_policy" "lambda_dynamodb_policy" {
   name        = "${var.project_name}-lambda-dynamodb-access"
-  description = "Allow Lambda to access DynamoDB table"
-  
+
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -39,7 +37,7 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
           "dynamodb:UpdateItem",
           "dynamodb:GetItem"
         ],
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.visitor_count.name}"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
       }
     ]
   })
@@ -50,20 +48,21 @@ resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attach" {
   policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
 
-# Lambda Function
 resource "aws_lambda_function" "update_visitor_count" {
   function_name = var.lambda_function_name
   role          = aws_iam_role.lambda_exec.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
 
-s3_bucket = "resume-api-lambda-bucket"
-s3_key    = "lambda_function.zip"
+  s3_bucket = "resume-api-lambda-bucket"
+  s3_key    = "lambda_function.zip"
 
-  depends_on = [aws_iam_role_policy_attachment.lambda_policy_attach]
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_policy_attach,
+    aws_iam_role_policy_attachment.lambda_dynamodb_attach
+  ]
 }
 
-# DynamoDB Table
 resource "aws_dynamodb_table" "visitor_count" {
   name         = var.dynamodb_table_name
   billing_mode = "PAY_PER_REQUEST"
@@ -75,14 +74,13 @@ resource "aws_dynamodb_table" "visitor_count" {
   }
 }
 
-# Safe seeding of DynamoDB table
 resource "null_resource" "seed_dynamodb" {
   provisioner "local-exec" {
     command = <<EOT
       ITEM_EXISTS=$(aws dynamodb get-item \
         --table-name ${var.dynamodb_table_name} \
         --key '{"id": {"S": "count"}}' \
-        --region $AWS_REGION \
+        --region ${data.aws_region.current.name} \
         --query 'Item.id.S' \
         --output text 2>/dev/null)
 
@@ -93,7 +91,7 @@ resource "null_resource" "seed_dynamodb" {
         aws dynamodb put-item \
           --table-name ${var.dynamodb_table_name} \
           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
-          --region $AWS_REGION
+          --region ${data.aws_region.current.name}
       fi
     EOT
     interpreter = ["/bin/bash", "-c"]
@@ -106,7 +104,6 @@ resource "null_resource" "seed_dynamodb" {
   depends_on = [aws_dynamodb_table.visitor_count]
 }
 
-# API Gateway
 resource "aws_apigatewayv2_api" "lambda_api" {
   name          = "${var.project_name}-api"
   protocol_type = "HTTP"
@@ -132,7 +129,6 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true
 }
 
-# Lambda Permission for API Gateway
 resource "aws_lambda_permission" "apigw_invoke_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
