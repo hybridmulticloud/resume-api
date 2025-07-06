@@ -17,11 +17,6 @@ resource "aws_s3_bucket" "lambda_bucket" {
   force_destroy = true
 }
 
-# Output S3 bucket name for CI to read
-output "lambda_s3_bucket" {
-  value = aws_s3_bucket.lambda_bucket.bucket
-}
-
 # DynamoDB Table
 resource "aws_dynamodb_table" "visitors" {
   name         = var.dynamodb_table_name
@@ -109,9 +104,4 @@ resource "aws_lambda_permission" "api_gateway" {
   function_name = aws_lambda_function.visitor_counter.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
-}
-
-# Output API endpoint
-output "api_gateway_url" {
-  value = aws_apigatewayv2_api.http_api.api_endpoint
 }
