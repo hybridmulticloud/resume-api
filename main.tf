@@ -45,6 +45,10 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attach" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
+}
 
 # Lambda Function
 resource "aws_lambda_function" "update_visitor_count" {
