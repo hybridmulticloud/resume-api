@@ -26,8 +26,8 @@ jobs:
       - name: Apply S3 Bucket Only
         run: terraform apply -target=aws_s3_bucket.lambda_bucket -auto-approve
 
-  upload_lambda:
-    name: Upload Lambda to S3
+  deploy_lambda:
+    name: Upload Lambda & Deploy Infra
     runs-on: ubuntu-latest
     needs: terraform_apply_bucket
 
@@ -40,38 +40,24 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Validate lambda_function.py exists
+        run: |
+          if [ ! -f lambda_function.py ]; then
+            echo "❌ lambda_function.py is missing!"
+            exit 1
+          fi
+
       - name: Zip Lambda function
         run: zip lambda_function.zip lambda_function.py
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Terraform Init (for output)
-        run: terraform init
-
-      - name: Get Bucket Name
-        id: bucket
-        run: echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
-
-      - name: Upload Lambda zip to S3
-        run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
-
-      - name: List S3 contents
-        run: aws s3 ls s3://$LAMBDA_BUCKET/
-
-
-  deploy_lambda_infra:
-    name: Deploy Remaining Infra
-    runs-on: ubuntu-latest
-    needs: upload_lambda
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Confirm zip file created
+        run: |
+          if [ ! -f lambda_function.zip ]; then
+            echo "❌ Zip file was not created!"
+            exit 1
+          else
+            echo "✅ Zip file created"
+          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -83,12 +69,23 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Wait for S3 object to propagate
+      - name: Get Terraform Output for Bucket
+        id: bucket
         run: |
-          echo "Waiting for lambda_function.zip to be available..."
-          for i in {1..10}; do
-            aws s3api head-object --bucket "$LAMBDA_BUCKET" --key "lambda_function.zip" && break || sleep 3
-          done
+          echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
+          echo "🪣 Bucket: $LAMBDA_BUCKET"
+
+      - name: Upload Lambda zip to S3
+        run: |
+          aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
+          echo "✅ Uploaded lambda_function.zip"
+
+      - name: Confirm Lambda zip in S3
+        run: |
+          aws s3 ls s3://$LAMBDA_BUCKET/lambda_function.zip || {
+            echo "❌ lambda_function.zip not found in S3!"
+            exit 1
+          }
 
       - name: Terraform Apply Full Infra
         run: terraform apply -auto-approve
