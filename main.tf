@@ -66,3 +66,37 @@ resource "aws_lambda_function" "visitor_counter" {
 # API Gateway v2 (HTTP API)
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "visitor-api"
+  protocol_type = "HTTP"
+}
+
+# API Integration
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id           = aws_apigatewayv2_api.http_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.visitor_counter.invoke_arn
+  integration_method = "POST"
+  payload_format_version = "2.0"
+}
+
+# API Route
+resource "aws_apigatewayv2_route" "default_route" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /UpdateVisitorCount"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+# API Stage
+resource "aws_apigatewayv2_stage" "lambda_stage" {
+  api_id      = aws_apigatewayv2_api.http_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+# Permission for API Gateway to invoke Lambda
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.visitor_counter.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
