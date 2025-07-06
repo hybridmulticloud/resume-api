@@ -5,3 +5,7 @@ output "api_gateway_url" {
 output "dynamodb_table_name" {
   value = aws_dynamodb_table.visitors.name
 }
+
+output "lambda_s3_bucket" {
+  value = aws_s3_bucket.lambda_bucket.id
+}
