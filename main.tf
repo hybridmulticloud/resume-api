@@ -26,6 +26,26 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_policy" "lambda_dynamodb_policy" {
+  name        = "${var.project_name}-lambda-dynamodb-access"
+  description = "Allow Lambda to access DynamoDB table"
+  
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:UpdateItem",
+          "dynamodb:GetItem"
+        ],
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${aws_dynamodb_table.visitor_count.name}"
+      }
+    ]
+  })
+}
+
+
 # Lambda Function
 resource "aws_lambda_function" "update_visitor_count" {
   function_name = var.lambda_function_name
