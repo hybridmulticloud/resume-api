@@ -2,15 +2,17 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Upload zipped Lambda to S3
-resource "aws_s3_bucket_object" "lambda_zip" {
+resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "resume-api-lambda-bucket"
-  key    = "lambda.zip"
-  source = "${path.module}/lambda.zip"
-  etag   = filemd5("${path.module}/lambda.zip")
 }
 
-# IAM Role for Lambda
+resource "aws_s3_bucket_object" "lambda_zip" {
+  bucket = aws_s3_bucket.lambda_bucket.bucket
+  key    = "lambda_function.zip"
+  source = "${path.module}/lambda_function.zip"
+  etag   = filemd5("${path.module}/lambda_function.zip")
+}
+
 resource "aws_iam_role" "lambda_exec" {
   name = "lambda-exec-role"
 
@@ -26,27 +28,24 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-# Attach basic execution policy
 resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda Function
 resource "aws_lambda_function" "update_visitor_count" {
   function_name = "UpdateVisitorCount"
   role          = aws_iam_role.lambda_exec.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.10"
 
-  s3_bucket         = "resume-api-lambda-bucket"
-  s3_key            = aws_s3_bucket_object.lambda_zip.key
-  source_code_hash  = filebase64sha256("${path.module}/lambda.zip")
+  s3_bucket = aws_s3_bucket.lambda_bucket.bucket
+  s3_key    = aws_s3_bucket_object.lambda_zip.key
+  source_code_hash = filebase64sha256("${path.module}/lambda_function.zip")
 
   depends_on = [aws_iam_role_policy_attachment.lambda_policy_attach]
 }
 
-# DynamoDB Table
 resource "aws_dynamodb_table" "visitor_count" {
   name         = "visitor_count"
   billing_mode = "PAY_PER_REQUEST"
@@ -58,12 +57,9 @@ resource "aws_dynamodb_table" "visitor_count" {
   }
 }
 
-# Null resource to seed table (only if item is missing)
 resource "null_resource" "seed_dynamodb" {
   provisioner "local-exec" {
     command = <<EOT
-      echo "Checking if DynamoDB item exists..."
-
       ITEM_EXISTS=$(aws dynamodb get-item \
         --table-name visitor_count \
         --key '{"id": {"S": "count"}}' \
@@ -72,9 +68,9 @@ resource "null_resource" "seed_dynamodb" {
         --output text 2>/dev/null)
 
       if [ "$ITEM_EXISTS" = "count" ]; then
-        echo "Item already exists — skipping insert."
+        echo "Item already exists — skipping."
       else
-        echo "Item missing — inserting initial count..."
+        echo "Seeding DynamoDB with initial value."
         aws dynamodb put-item \
           --table-name visitor_count \
           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
@@ -91,17 +87,16 @@ resource "null_resource" "seed_dynamodb" {
   depends_on = [aws_dynamodb_table.visitor_count]
 }
 
-# API Gateway setup
 resource "aws_apigatewayv2_api" "lambda_api" {
   name          = "VisitorCounterAPI"
   protocol_type = "HTTP"
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id                = aws_apigatewayv2_api.lambda_api.id
-  integration_type      = "AWS_PROXY"
-  integration_uri       = aws_lambda_function.update_visitor_count.invoke_arn
-  integration_method    = "POST"
+  api_id           = aws_apigatewayv2_api.lambda_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.update_visitor_count.invoke_arn
+  integration_method = "POST"
   payload_format_version = "2.0"
 }
 
@@ -117,7 +112,6 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true
 }
 
-# Lambda permission for API Gateway to invoke
 resource "aws_lambda_permission" "apigw_invoke_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
