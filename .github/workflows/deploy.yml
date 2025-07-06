@@ -25,10 +25,13 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: AWS_REGION
 
       - name: Terraform Init
         run: terraform init
+
+      - name: Terraform Apply (create S3 bucket first)
+        run: terraform apply -target=aws_s3_bucket.lambda_bucket -auto-approve
 
       - name: Get Terraform Output for Bucket
         id: bucket
@@ -38,5 +41,5 @@ jobs:
       - name: Upload zip to S3
         run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
-      - name: Terraform Apply
+      - name: Final Terraform Apply
         run: terraform apply -auto-approve
