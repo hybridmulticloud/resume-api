@@ -1,15 +1,15 @@
-name: Deploy Infrastructure to AWS via Terraform Cloud
+name: Deploy Infrastructure and Lambda Function via Terraform
 
 on:
   push:
-    branches: [main]
+    branches: [main]  # Trigger on push to the main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout Code
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -20,10 +20,10 @@ jobs:
     - name: Install zip (for packaging Lambda)
       run: sudo apt-get install zip
 
-    - name: Package Lambda code
+    - name: Package Lambda Function
       run: zip lambda_function.zip lambda_function.py
 
-    - name: Upload Lambda ZIP (for visibility/debugging - optional)
+    - name: Upload Lambda ZIP (optional for debugging)
       uses: actions/upload-artifact@v3
       with:
         name: lambda_function.zip
@@ -34,6 +34,14 @@ jobs:
       with:
         terraform_version: 1.8.2
 
+    # Optional: Validate AWS credentials are correct
+    - name: Validate AWS Credentials
+      run: aws sts get-caller-identity
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
     - name: Terraform Init
       run: terraform init
       env:
@@ -43,11 +51,7 @@ jobs:
 
     - name: Terraform Format Check
       run: terraform fmt -check
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}      
-      
+
     - name: Terraform Plan
       run: terraform plan
       env:
@@ -56,16 +60,9 @@ jobs:
         AWS_REGION: ${{ secrets.AWS_REGION }}
 
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
       run: terraform apply -auto-approve
+      if: github.ref == 'refs/heads/main'
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}
-
-    - name: Verify AWS credentials
-      run: aws sts get-caller-identity
-        env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
