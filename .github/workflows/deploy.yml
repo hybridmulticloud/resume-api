@@ -26,8 +26,8 @@ jobs:
       - name: Apply S3 Bucket Only
         run: terraform apply -target=aws_s3_bucket.lambda_bucket -auto-approve
 
-  deploy_lambda:
-    name: Upload Lambda & Deploy Infra
+  upload_lambda:
+    name: Upload Lambda to S3
     runs-on: ubuntu-latest
     needs: terraform_apply_bucket
 
@@ -50,15 +50,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Init
+      - name: Terraform Init (for output)
         run: terraform init
 
-      - name: Get Terraform Output for Bucket
+      - name: Get Bucket Name
         id: bucket
         run: echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
 
       - name: Upload Lambda zip to S3
         run: aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
+
+  deploy_lambda_infra:
+    name: Deploy Remaining Infra
+    runs-on: ubuntu-latest
+    needs: upload_lambda
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
 
       - name: Terraform Apply Full Infra
         run: terraform apply -auto-approve
