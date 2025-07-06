@@ -7,5 +7,5 @@ output "dynamodb_table_name" {
 }
 
 output "lambda_s3_bucket" {
-  value = aws_s3_bucket.lambda_bucket.id
+  value = aws_s3_bucket.lambda_bucket.bucket
 }
