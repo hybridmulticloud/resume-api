@@ -3,7 +3,7 @@ terraform {
     organization = "your-hashicorp-org-name"
 
     workspaces {
-      name = "cloud-resume-backend"
+      name = "resume-api-backend"
     }
   }
 }
