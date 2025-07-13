@@ -8,6 +8,11 @@ output "api_endpoint" {
   value       = aws_apigatewayv2_api.lambda_api.api_endpoint
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront Distribution ID for frontend"
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
 output "dynamodb_table_name" {
   description = "DynamoDB table for counting visitors"
   value       = aws_dynamodb_table.visitor_count.name
