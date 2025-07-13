@@ -1,7 +1,7 @@
 variable "project_name" {
   description = "Base name for all resources"
   type        = string
-  default     = "resume-api"
+  default     = "resume-api-backend"
 }
 
 variable "lambda_function_name" {
