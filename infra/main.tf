@@ -116,6 +116,13 @@ resource "null_resource" "seed_dynamodb" {
 resource "aws_apigatewayv2_api" "lambda_api" {
   name          = "${var.project_name}-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://hybridmulti.cloud"]
+    allow_methods = ["POST", "OPTIONS"]
+    allow_headers = ["content-type"]
+    max_age       = 3600
+  }
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
@@ -140,13 +147,6 @@ resource "aws_apigatewayv2_stage" "default" {
   default_route_settings {
     throttling_burst_limit = 5000
     throttling_rate_limit  = 10000
-  }
-
-  cors_configuration {
-    allow_origins = ["https://hybridmulti.cloud"]
-    allow_methods = ["POST", "OPTIONS"]
-    allow_headers = ["content-type"]
-    max_age       = 3600
   }
 }
 
