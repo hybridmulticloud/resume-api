@@ -50,8 +50,23 @@ resource "aws_lambda_function" "update_visitor_count" {
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
 
-  s3_bucket = "resume-api-lambda-bucket"
-  s3_key    = "lambda_function.zip"
+  # This block enables Terraform to ignore source code updates
+  filename         = null
+  source_code_hash = null
+  publish          = true
+
+  environment {
+    variables = {
+      TABLE_NAME = var.dynamodb_table_name
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_exec,
@@ -73,21 +88,13 @@ resource "aws_dynamodb_table" "visitor_count" {
 resource "null_resource" "seed_dynamodb" {
   provisioner "local-exec" {
     command = <<EOT
-      ITEM_EXISTS=$(aws dynamodb get-item \
-        --table-name ${var.dynamodb_table_name} \
-        --key '{"id": {"S": "count"}}' \
-        --region ${data.aws_region.current.id} \
-        --query 'Item.id.S' \
-        --output text 2>/dev/null)
+      ITEM_EXISTS=$(aws dynamodb get-item         --table-name ${var.dynamodb_table_name}         --key '{"id": {"S": "count"}}'         --region ${data.aws_region.current.id}         --query 'Item.id.S'         --output text 2>/dev/null)
 
       if [ "$ITEM_EXISTS" = "count" ]; then
         echo "Item already exists — skipping seed."
       else
         echo "Seeding table with initial count = 0"
-        aws dynamodb put-item \
-          --table-name ${var.dynamodb_table_name} \
-          --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
-          --region ${data.aws_region.current.id}
+        aws dynamodb put-item           --table-name ${var.dynamodb_table_name}           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}'           --region ${data.aws_region.current.id}
       fi
     EOT
     interpreter = ["/bin/bash", "-c"]
