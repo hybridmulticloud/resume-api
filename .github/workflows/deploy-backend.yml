@@ -1,4 +1,4 @@
-name: Deploy Backend via Terraform Cloud
+name: Deploy Backend Infrastructure
 
 on:
   push:
@@ -20,16 +20,9 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Configure Terraform Cloud Workspace
-        run: echo "Terraform Cloud backend is already configured in terraform.tf"
-
       - name: Terraform Init
         working-directory: infra
         run: terraform init
-
-      - name: Terraform Plan
-        working-directory: infra
-        run: terraform plan
 
       - name: Terraform Apply
         working-directory: infra
@@ -39,8 +32,18 @@ jobs:
         working-directory: infra
         run: terraform output -raw api_gateway_url > ../api_url.txt
 
-      - name: Upload API URL as artifact
+      - name: Output CloudFront ID
+        working-directory: infra
+        run: terraform output -raw cloudfront_distribution_id > ../cloudfront_id.txt
+
+      - name: Upload API URL Artifact
         uses: actions/upload-artifact@v3
         with:
           name: api-url
           path: api_url.txt
+
+      - name: Upload CloudFront ID Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cloudfront-id
+          path: cloudfront_id.txt
