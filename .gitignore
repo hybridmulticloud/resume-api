@@ -1,41 +1,8 @@
-# Python byte-compiled / cache files
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Python virtual environments
-.env
-venv/
-ENV/
-env/
-
-# AWS credentials (never commit these!)
-.aws/
-*.pem
-
-# IDE configs
-.vscode/
-.idea/
-
-# System files
-.DS_Store
-Thumbs.db
-
-# Logs and output
-*.log
-
-# Python egg metadata
-*.egg-info/
-dist/
-build/
-
-# Zip archives for Lambda packaging
+*.pyc
 *.zip
-lambda_function.zip
-
-# Terraform state and cache
-*.tfstate
-*.tfstate.*
 .terraform/
-.terraform.lock.hcl
+*.tfstate*
+terraform.tfvars
+.aws/
+.env
