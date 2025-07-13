@@ -1,136 +1,115 @@
-# ☁️ Cloud Resume Challenge – Visitor Counter API
+# ☁️ Cloud Resume Challenge – Backend Infrastructure (Terraform + Lambda)
 
-Welcome! This repository contains the backend code for my https://hybridmulti.cloud/ project — a serverless visitor counter API built on AWS.
+This repository contains the backend infrastructure and Lambda function for the [hybridmulti.cloud](https://hybridmulti.cloud) resume project.
 
-It leverages **Lambda**, **API Gateway**, and **DynamoDB** to count and return the number of visitors to my resume website in real time.
-
----
-
-## 📦 What This Code Does
-
-When someone visits my website, this Lambda function is triggered via an API Gateway endpoint. It connects to DynamoDB, increments a counter, and returns the updated count to the frontend.
-
-This is part of the challenge’s goal to demonstrate hands-on experience with real cloud infrastructure — including infrastructure as code, CI/CD, and serverless development.
+It demonstrates:
+- ✅ Real-world use of **Terraform** to deploy AWS resources
+- ✅ Direct **Lambda deployment** via GitHub Actions using AWS CLI
+- ✅ Clean separation of infrastructure and function code
 
 ---
 
-## ⚙️ Tech Stack
+## 🚀 Components
 
-- **AWS Lambda** – Runs the Python function
-- **Amazon DynamoDB** – Stores the visitor count
-- **API Gateway (HTTP API)** – Exposes the API to the web
-- **Python 3.x** – Used for the backend logic (`boto3` SDK)
-- **GitHub** – Source control and CI/CD
-- **GitHub Actions** – Automates deployment (coming soon)
+| Component        | Service           | Description |
+|------------------|-------------------|-------------|
+| Compute          | AWS Lambda        | Python 3.x function for counting site visits |
+| API Layer        | API Gateway v2    | Public HTTP endpoint (`/UpdateVisitorCount`) |
+| Data Layer       | DynamoDB          | NoSQL table tracking visitor counts |
+| IaC              | Terraform         | Declarative deployment of all AWS resources |
+| CI/CD            | GitHub Actions    | Split pipelines for infra and function code |
 
 ---
 
-## 🧪 Example Response
+## 🧱 Directory Structure
 
-```json
-{
-  "visits": 42
-}
+```
+resume-api/
+├── lambda_function.py           # Lambda visitor counter logic
+├── infra/                       # Terraform IaC
+│   ├── main.tf
+│   ├── outputs.tf
+│   ├── variables.tf
+│   └── terraform.tfvars (optional)
+└── .github/
+    └── workflows/
+        ├── infra.yml            # Deploys infrastructure
+        └── lambda-deploy.yml    # Updates Lambda code directly
 ```
 
 ---
 
-## 🚀 How To Deploy (Manually)
-This walkthrough assumes you’re setting up everything via the AWS Console. Automation via GitHub Actions will be added later.
+## ⚙️ How It Works
 
-1️⃣ Create DynamoDB Table
-Go to DynamoDB → Create table
+### Frontend JS (in hybridmulti.cloud) does:
 
-Table name: visitor_count
+```js
+fetch("https://<api-id>.execute-api.<region>.amazonaws.com/UpdateVisitorCount", {
+  method: "POST",
+  body: JSON.stringify({})
+});
+```
 
-Partition key: id (String)
+### Backend Lambda Function:
 
-Create the table, then manually insert an item:
-```json
-{
-  "id": "count",
-  "visits": 0
-}
+- Increments `visits` in DynamoDB table `VisitorCount`
+- Returns the updated count
+
+---
+
+## 📦 Deployment Instructions
+
+### 1️⃣ Provision AWS Infrastructure
+
+Trigger GitHub Actions: **`.github/workflows/infra.yml`** or run manually:
+
+```bash
+cd infra
+terraform init
+terraform apply
+```
+
+Creates:
+- Lambda function (no ZIP file attached)
+- IAM role (with least privilege)
+- API Gateway integration
+- DynamoDB table (with seeded counter)
+
+---
+
+### 2️⃣ Deploy Lambda Code
+
+Triggered automatically on `lambda_function.py` changes via **`.github/workflows/lambda-deploy.yml`**
+
+Or run locally:
+```bash
+zip function.zip lambda_function.py
+aws lambda update-function-code \
+  --function-name UpdateVisitorCount \
+  --zip-file fileb://function.zip
 ```
 
 ---
 
-## 2️⃣ Create Lambda Function
-Go to Lambda → Create function
+## 🔐 IAM & Security
 
-Name: UpdateVisitorCount
-
-Runtime: Python 3.x
-
-Use the code from lambda_function.py in this repo
-
-Add environment variables if needed
-
-✅ Permissions:
-
-Attach AmazonDynamoDBFullAccess for testing (restrict later)
-
-3️⃣ Create API Gateway
-Go to API Gateway → Create HTTP API
-
-Add integration: select your Lambda function
-
-Route: POST /UpdateVisitorCount
-
-Enable CORS (for browser access later)
-
-Deploy to the default stage ($default)
-
-4️⃣ Test Your API
-You can test the deployed endpoint using Postman or curl:
-
-Method: POST
-
-URL: https://<api-id>.execute-api.<region>.amazonaws.com/UpdateVisitorCount
-
-Body:
-
-```json
-{}
-```
-
-Expected response:
-
-```json
-{
-  "visits": 1
-}
-```
+- Lambda has minimal access: `dynamodb:GetItem`, `dynamodb:UpdateItem`
+- Lambda logs to CloudWatch
+- API Gateway CORS restricted to `https://hybridmulti.cloud`
 
 ---
 
-## 🤖 How To Deploy (Automatically via GitHub Actions) – Coming Soon
-I'll be adding a GitHub Actions workflow to automatically deploy changes to Lambda whenever I push to this repo.
+## 📤 Outputs
 
-This will involve:
-
-Creating an IAM user for GitHub Actions
-
-Adding AWS credentials as GitHub secrets
-
-Writing a .github/workflows/deploy.yml CI/CD pipeline
-
----
-
-## 🧠 Lessons Learned
-This chunk of the Cloud Resume Challenge taught me:
-
-How to connect AWS services using IAM and event-driven design
-
-How to write clean Python code using the boto3 SDK
-
-How to expose secure APIs via API Gateway
-
-And perhaps most importantly — how to get “real world” experience building cloud-native applications, even in a personal project.
+Run `terraform output` to get:
+- `api_gateway_url` — ready to plug into frontend
+- `dynamodb_table_name` — current storage table
+- `lambda_function_name` — deployed name for updates
 
 ---
 
 ## ✍️ Author
-Hi! I'm Kerem Kirci, 
 
-👉 Visit my resume site https://hybridmulti.cloud
+**Kerem Kirci** – Senior Technical Consultant  
+🔗 [linkedin.com/in/kerem-kirci](https://linkedin.com/in/kerem-kirci)  
+🌐 [https://hybridmulti.cloud](https://hybridmulti.cloud)
