@@ -20,10 +20,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Terraform Init
+      - name: Terraform Init (Bucket Only)
+        working-directory: infra
         run: terraform init
 
       - name: Apply S3 Bucket Only
+        working-directory: infra
         run: terraform apply -target=aws_s3_bucket.lambda_bucket -auto-approve -var="aws_region=${{ secrets.AWS_REGION }}"
 
   deploy_lambda:
@@ -50,16 +52,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Terraform Init
+      - name: Terraform Init (Full Infra)
+        working-directory: infra
         run: terraform init
 
       - name: Upload Lambda zip to S3
+        working-directory: infra
         run: |
           echo "LAMBDA_BUCKET=$(terraform output -raw lambda_s3_bucket)" >> $GITHUB_ENV
-          aws s3 cp lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
+          aws s3 cp ../lambda_function.zip s3://$LAMBDA_BUCKET/lambda_function.zip
 
       - name: Confirm Lambda zip in S3
         run: aws s3 ls s3://$LAMBDA_BUCKET/lambda_function.zip
 
       - name: Terraform Apply Full Infra
+        working-directory: infra
         run: terraform apply -auto-approve -var="aws_region=${{ secrets.AWS_REGION }}"
