@@ -27,3 +27,49 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+variable "frontend_bucket_name" {
+  description = "S3 bucket name used for static website hosting"
+  type        = string
+  default     = "hybridmulti.cloud"
+}
+
+variable "frontend_domain" {
+  description = "Custom domain for the static site"
+  type        = string
+  default     = "hybridmulti.cloud"
+}
+
+variable "index_document" {
+  description = "Main index document for the S3 website"
+  type        = string
+  default     = "index.html"
+}
+
+variable "error_document" {
+  description = "Fallback document for S3 errors"
+  type        = string
+  default     = "index.html"
+}
+
+variable "cloudfront_origin_id" {
+  description = "CloudFront origin ID label"
+  type        = string
+  default     = "s3-frontend-static-site"
+}
+
+variable "cert_region" {
+  description = "Region for ACM certificate (must be us-east-1 for CloudFront)"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "ssl_min_protocol_version" {
+  description = "Minimum SSL version supported by CloudFront"
+  type        = string
+  default     = "TLSv1.2_2021"
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for the frontend domain"
+  type        = string
+}
