@@ -1,6 +1,6 @@
 terraform {
   backend "remote" {
-    organization = "your-hashicorp-org-name"
+    organization = "hybridmulticloud"
 
     workspaces {
       name = "resume-api-backend"
