@@ -44,11 +44,6 @@ resource "aws_iam_role_policy" "lambda_inline_dynamodb" {
   })
 }
 
-  # This block enables Terraform to ignore source code updates
-  filename         = null
-  source_code_hash = null
-  publish          = true
-
   environment {
     variables = {
       TABLE_NAME = var.dynamodb_table_name
