@@ -1,0 +1,37 @@
+name: CI – Lambda Code Update
+
+on:
+  push:
+    paths:
+      - "lambda_function.py"
+      - ".github/workflows/lambda-deploy.yml"
+    branches: [main]
+
+jobs:
+  deploy_lambda_code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Zip Lambda function
+        run: zip function.zip lambda_function.py
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy Lambda using AWS CLI
+        run: |
+          aws lambda update-function-code \
+            --function-name UpdateVisitorCount \
+            --zip-file fileb://function.zip
