@@ -24,7 +24,7 @@ It demonstrates:
 ## 🧱 Directory Structure
 
 ```
-resume-api/
+resume-api-backend/
 ├── lambda_function.py           # Lambda visitor counter logic
 ├── infra/                       # Terraform IaC
 │   ├── main.tf
