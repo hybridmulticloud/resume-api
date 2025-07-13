@@ -30,7 +30,6 @@ resume-api/
 │   ├── main.tf
 │   ├── outputs.tf
 │   ├── variables.tf
-│   └── terraform.tfvars (optional)
 └── .github/
     └── workflows/
         ├── infra.yml            # Deploys infrastructure
