@@ -1,0 +1,46 @@
+name: Deploy Backend via Terraform Cloud
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "lambda_function.py"
+      - ".github/workflows/deploy-backend.yml"
+
+jobs:
+  terraform_backend:
+    name: Apply Terraform Infra
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure Terraform Cloud Workspace
+        run: echo "Terraform Cloud backend is already configured in terraform.tf"
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve
+
+      - name: Output API Gateway URL
+        working-directory: infra
+        run: terraform output -raw api_gateway_url > ../api_url.txt
+
+      - name: Upload API URL as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-url
+          path: api_url.txt
