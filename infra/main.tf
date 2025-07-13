@@ -44,6 +44,15 @@ resource "aws_iam_role_policy" "lambda_inline_dynamodb" {
   })
 }
 
+resource "aws_lambda_function" "update_visitor_count" {
+  function_name = var.lambda_function_name
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "update_visitor_count.lambda_handler"
+  runtime       = var.lambda_runtime
+
+  filename         = "lambda_stub.zip"
+  source_code_hash = filebase64sha256("lambda_stub.zip")
+
   environment {
     variables = {
       TABLE_NAME = var.dynamodb_table_name
@@ -77,13 +86,21 @@ resource "aws_dynamodb_table" "visitor_count" {
 resource "null_resource" "seed_dynamodb" {
   provisioner "local-exec" {
     command = <<EOT
-      ITEM_EXISTS=$(aws dynamodb get-item         --table-name ${var.dynamodb_table_name}         --key '{"id": {"S": "count"}}'         --region ${data.aws_region.current.id}         --query 'Item.id.S'         --output text 2>/dev/null)
+      ITEM_EXISTS=$(aws dynamodb get-item \
+        --table-name ${var.dynamodb_table_name} \
+        --key '{"id": {"S": "count"}}' \
+        --region ${data.aws_region.current.id} \
+        --query 'Item.id.S' \
+        --output text 2>/dev/null)
 
       if [ "$ITEM_EXISTS" = "count" ]; then
         echo "Item already exists — skipping seed."
       else
         echo "Seeding table with initial count = 0"
-        aws dynamodb put-item           --table-name ${var.dynamodb_table_name}           --item '{"id": {"S": "count"}, "visits": {"N": "0"}}'           --region ${data.aws_region.current.id}
+        aws dynamodb put-item \
+          --table-name ${var.dynamodb_table_name} \
+          --item '{"id": {"S": "count"}, "visits": {"N": "0"}}' \
+          --region ${data.aws_region.current.id}
       fi
     EOT
     interpreter = ["/bin/bash", "-c"]
@@ -102,11 +119,11 @@ resource "aws_apigatewayv2_api" "lambda_api" {
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id                = aws_apigatewayv2_api.lambda_api.id
-  integration_type      = "AWS_PROXY"
-  integration_uri       = aws_lambda_function.update_visitor_count.invoke_arn
-  integration_method    = "POST"
-  payload_format_version = "2.0"
+  api_id                  = aws_apigatewayv2_api.lambda_api.id
+  integration_type        = "AWS_PROXY"
+  integration_uri         = aws_lambda_function.update_visitor_count.invoke_arn
+  integration_method      = "POST"
+  payload_format_version  = "2.0"
 }
 
 resource "aws_apigatewayv2_route" "lambda_route" {
