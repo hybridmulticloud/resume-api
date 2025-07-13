@@ -1,6 +1,7 @@
 import json
 import boto3
 import logging
+import os
 
 # Setup logger
 logger = logging.getLogger()
@@ -8,7 +9,7 @@ logger.setLevel(logging.INFO)
 
 # Connect to DynamoDB
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('VisitorCount')
+table = dynamodb.Table(os.environ["TABLE_NAME"])
 
 def lambda_handler(event, context):
     logger.info("Lambda invoked with event: %s", json.dumps(event))
