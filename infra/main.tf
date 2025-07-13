@@ -44,12 +44,6 @@ resource "aws_iam_role_policy" "lambda_inline_dynamodb" {
   })
 }
 
-resource "aws_lambda_function" "update_visitor_count" {
-  function_name = var.lambda_function_name
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = var.lambda_runtime
-
   # This block enables Terraform to ignore source code updates
   filename         = null
   source_code_hash = null
