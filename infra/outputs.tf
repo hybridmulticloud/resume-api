@@ -8,12 +8,17 @@ output "dynamodb_table_name" {
   value       = aws_dynamodb_table.visitor_count.name
 }
 
-output "lambda_s3_bucket" {
-  description = "Name of the S3 bucket for Lambda"
-  value       = aws_s3_bucket.lambda_bucket.bucket
+output "lambda_function_name" {
+  description = "Deployed Lambda function name"
+  value       = aws_lambda_function.update_visitor_count.function_name
+}
+
+output "lambda_execution_role_arn" {
+  description = "IAM role ARN assigned to the Lambda function"
+  value       = aws_iam_role.lambda_exec.arn
 }
 
 output "api_endpoint" {
-  description = "API Gateway endpoint URL"
+  description = "Base API Gateway endpoint URL"
   value       = aws_apigatewayv2_api.lambda_api.api_endpoint
 }
