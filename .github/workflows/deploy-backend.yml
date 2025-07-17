@@ -24,12 +24,18 @@ jobs:
 
       - name: Check Terraform Version
         run: terraform -version
-
+        
+      - name: Debug token presence
+        run: echo "TF_API_TOKEN is set"  # DO NOT echo the value
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      
       - name: Terraform Init
         working-directory: infra
         run: terraform init
         env:
           TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
 
       - name: Terraform Apply
         working-directory: infra
