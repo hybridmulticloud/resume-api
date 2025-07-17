@@ -13,9 +13,6 @@ jobs:
     name: Apply Terraform Infra
     runs-on: ubuntu-latest
 
-      - name: Debug PATH
-      run: echo $PATH && which terraform
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
