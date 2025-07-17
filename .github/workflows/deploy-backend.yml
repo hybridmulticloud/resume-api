@@ -42,13 +42,13 @@ jobs:
         run: terraform output -raw cloudfront_distribution_id > ../cloudfront_id.txt
 
       - name: Upload API URL Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: api-url
           path: api_url.txt
 
       - name: Upload CloudFront ID Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cloudfront-id
           path: cloudfront_id.txt
