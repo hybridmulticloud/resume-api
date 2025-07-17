@@ -13,13 +13,21 @@ jobs:
     name: Apply Terraform Infra
     runs-on: ubuntu-latest
 
+    # Terraform Cloud token + required TF_VAR
     env:
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-      TF_VAR_route53_zone_id:  ${{ secrets.ROUTE53_ZONE_ID }}
-    
+      TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -28,19 +36,21 @@ jobs:
 
       - name: Check Terraform Version
         run: terraform -version
-        
+
       - name: Debug token presence
-        run: echo "TF_API_TOKEN is set"  # DO NOT echo the value
-        env:
-          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
-      
+        run: echo "TF_API_TOKEN is set"
+
       - name: Terraform Init
         working-directory: infra
         run: terraform init -input=false -lock-timeout=2m
 
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan -out=tfplan -input=false -lock-timeout=2m
+
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -auto-approve -lock-timeout=2m
+        run: terraform apply -auto-approve -input=false -lock-timeout=2m
 
       - name: Output API Gateway URL
         working-directory: infra
