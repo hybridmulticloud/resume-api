@@ -13,12 +13,20 @@ jobs:
     name: Apply Terraform Infra
     runs-on: ubuntu-latest
 
+      - name: Debug PATH
+      run: echo $PATH && which terraform
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Check Terraform Version
+        run: terraform -version
 
       - name: Terraform Init
         working-directory: infra
