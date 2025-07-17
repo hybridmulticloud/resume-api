@@ -35,11 +35,11 @@ jobs:
       
       - name: Terraform Init
         working-directory: infra
-        run: terraform init -input=false
+        run: terraform init -input=false -lock-timeout=2m
 
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -lock-timeout=2m
 
       - name: Output API Gateway URL
         working-directory: infra
