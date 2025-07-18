@@ -4,16 +4,16 @@ variable "project_name" {
   default     = "resume-api"
 }
 
+variable "aws_region" {
+  description = "AWS region to deploy resources"
+  type        = string
+  default     = "us-east-1"
+}
+
 variable "lambda_function_name" {
   description = "Name of the Lambda function"
   type        = string
   default     = "UpdateVisitorCount"
-}
-
-variable "dynamodb_table_name" {
-  description = "Name of the DynamoDB table"
-  type        = string
-  default     = "VisitorCount"
 }
 
 variable "lambda_runtime" {
@@ -22,11 +22,12 @@ variable "lambda_runtime" {
   default     = "python3.12"
 }
 
-variable "aws_region" {
-  description = "AWS region to deploy resources"
+variable "dynamodb_table_name" {
+  description = "Name of the DynamoDB table"
   type        = string
-  default     = "us-east-1"
+  default     = "VisitorCount"
 }
+
 variable "frontend_bucket_name" {
   description = "S3 bucket name used for static website hosting"
   type        = string
@@ -40,13 +41,7 @@ variable "frontend_domain" {
 }
 
 variable "index_document" {
-  description = "Main index document for the S3 website"
-  type        = string
-  default     = "index.html"
-}
-
-variable "error_document" {
-  description = "Fallback document for S3 errors"
+  description = "Default root object for CloudFront"
   type        = string
   default     = "index.html"
 }
@@ -61,12 +56,6 @@ variable "cert_region" {
   description = "Region for ACM certificate (must be us-east-1 for CloudFront)"
   type        = string
   default     = "us-east-1"
-}
-
-variable "ssl_min_protocol_version" {
-  description = "Minimum SSL version supported by CloudFront"
-  type        = string
-  default     = "TLSv1.2_2021"
 }
 
 variable "route53_zone_id" {
