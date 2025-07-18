@@ -2,81 +2,51 @@
 
 This repository hosts the backend infrastructure for my personal resume site, built as part of the Cloud Resume Challenge. It wires up:
 
-- An **HTTP API** (API Gateway)  
-- A **Lambda function** (`UpdateVisitorCount`)  
+- An **HTTP API** (API Gateway)
+- A **Lambda function** (`UpdateVisitorCount`)
 - A **DynamoDB** table (`VisitorCount`)
+- Infrastructure as Code (Terraform)
 
-Each time someone visits my resume, the Lambda increments a counter—so you can see real-time visitor stats on the frontend.
+🌐 Live Resume Site: [https://hybridmulti.cloud](https://hybridmulti.cloud)
 
 ---
 
 ## How It Links to the Frontend
 
-The frontend (in [resume-api-frontend](https://github.com/hybridmulticloud/resume-api-frontend)) downloads two artifacts that this backend emits:
+The frontend ([resume-api-frontend](https://github.com/hybridmulticloud/resume-api-frontend)) downloads these backend build artifacts:
 
-1. **API Gateway URL** (`api_gateway_url`)  
-2. **CloudFront Distribution ID** (`cloudfront_distribution_id`)
-
-These values let the static site call the visitor-count API and invalidate its cache whenever we deploy.
+1. `api_gateway_url` – Used in the frontend to fetch visitor counts
+2. `cloudfront_distribution_id` – Used to invalidate cache after deployment
 
 ---
 
 ## Architecture
 
 ```plaintext
-                                                          +----------------------+
-                                                          |  DynamoDB Visitor    |
-                                                          |      Count Table     |
-                                                          +----------+-----------+
-                                                                     ^
-                                                                     |
-                            +-------------+                  +--------+--------+
-                            |   API       |    Invoke      | Lambda Function |
-      Route53 Alias         |  Gateway    | ─────────────> | UpdateVisitor   |
-   hybridmulti.cloud  ──►   +-------------+                +-----------------+
+     API Gateway
+         │
+         ▼
++----------------------+       +----------------------+
+|   Lambda Function     | ◄──→ |   DynamoDB Table     |
+| UpdateVisitorCount    |      | VisitorCount         |
++----------------------+       +----------------------+
+         ▲
+         │
+   Triggered via frontend (CloudFront → API Gateway)
+```
 
-Prerequisites
-Terraform ≥ 1.5.7
+---
 
-AWS credentials with permissions to create: IAM, Lambda, DynamoDB, API Gateway
+## CI/CD with GitHub Actions
 
-GitHub Actions runner (CI/CD) with secrets configured (see below)
+GitHub Actions handle all deployment via `.github/workflows/`:
 
-Quick Start
-Clone and enter the repo
+- **infra.yml** – Terraform plan and apply
+- **lambda-deploy.yml** – Zips and uploads Lambda
+- **deploy-backend.yml** – Coordinates full backend deployment
 
-bash
-git clone https://github.com/hybridmulticloud/resume-api-backend.git
-cd resume-api-backend
-(Optional) Override defaults in variables.tf.
+---
 
-Bootstrap your environment and deploy:
+## Contributing
 
-bash
-terraform init
-terraform fmt
-terraform validate
-terraform plan   # review
-terraform apply  # provision
-Note the API Gateway URL and CloudFront ID printed at the end.
-
-Switch to the frontend repo, update its workflow secrets/placeholders with these values, then trigger deployment.
-
-Outputs
-Name	Description
-api_gateway_url	Full POST URL for visitor-count endpoint
-api_endpoint	Base API Gateway URL
-cloudfront_distribution_id	Frontend CloudFront Distribution identifier
-dynamodb_table_name	Name of the DynamoDB table
-lambda_function_name	Deployed Lambda function name
-lambda_execution_role_arn	IAM role ARN used by the Lambda function
-CI/CD
-A GitHub Actions workflow (.github/workflows/deploy-backend.yml) automatically:
-
-Formats & validates Terraform
-
-Runs plan & apply on main
-
-Exposes api-url & cloudfront-id artifacts for the frontend to consume
-
-This backend powers my resume at https://hybridmulti.cloud as part of the Cloud Resume Challenge!
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution and branching guidelines.
