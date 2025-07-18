@@ -13,7 +13,6 @@ jobs:
     name: Apply Terraform Infra
     runs-on: ubuntu-latest
 
-    # Terraform Cloud token + required TF_VAR
     env:
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
       TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}
@@ -33,12 +32,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
-
-      - name: Check Terraform Version
-        run: terraform -version
-
-      - name: Debug token presence
-        run: echo "TF_API_TOKEN is set"
 
       - name: Terraform Init
         working-directory: infra
@@ -60,13 +53,13 @@ jobs:
         working-directory: infra
         run: terraform output -raw cloudfront_distribution_id > ../cloudfront_id.txt
 
-      - name: Upload API URL Artifact
+      - name: Upload API URL
         uses: actions/upload-artifact@v4
         with:
           name: api-url
           path: api_url.txt
 
-      - name: Upload CloudFront ID Artifact
+      - name: Upload CloudFront ID
         uses: actions/upload-artifact@v4
         with:
           name: cloudfront-id
