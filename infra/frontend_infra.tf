@@ -1,5 +1,3 @@
-data "aws_caller_identity" "current" {}
-
 resource "aws_s3_bucket" "frontend" {
   bucket = var.frontend_bucket_name
   acl    = "private"
@@ -16,11 +14,6 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
-
-provider "aws" {
-  alias  = "us_east_1"
-  region = var.cert_region
 }
 
 data "aws_acm_certificate" "frontend_cert" {
@@ -46,8 +39,8 @@ resource "aws_cloudfront_distribution" "frontend" {
   aliases             = [var.frontend_domain]
 
   origin {
-    domain_name             = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id               = var.cloudfront_origin_id
+    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
+    origin_id                = var.cloudfront_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
@@ -70,7 +63,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   viewer_certificate {
     acm_certificate_arn      = data.aws_acm_certificate.frontend_cert.arn
     ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    minimum_protocol_version = var.ssl_min_protocol_version
   }
 
   restrictions {
@@ -110,4 +103,16 @@ data "aws_iam_policy_document" "allow_cloudfront" {
 resource "aws_s3_bucket_policy" "frontend" {
   bucket = aws_s3_bucket.frontend.id
   policy = data.aws_iam_policy_document.allow_cloudfront.json
+}
+
+resource "aws_route53_record" "frontend_alias" {
+  zone_id = var.route53_zone_id
+  name    = var.frontend_domain
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
