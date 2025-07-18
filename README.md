@@ -1,114 +1,82 @@
-# ☁️ Cloud Resume Challenge – Backend Infrastructure (Terraform + Lambda)
+# Cloud Resume Challenge: Backend API
 
-This repository contains the backend infrastructure and Lambda function for the [hybridmulti.cloud](https://hybridmulti.cloud) resume project.
+This repository hosts the backend infrastructure for my personal resume site, built as part of the Cloud Resume Challenge. It wires up:
 
-It demonstrates:
-- ✅ Real-world use of **Terraform** to deploy AWS resources
-- ✅ Direct **Lambda deployment** via GitHub Actions using AWS CLI
-- ✅ Clean separation of infrastructure and function code
+- An **HTTP API** (API Gateway)  
+- A **Lambda function** (`UpdateVisitorCount`)  
+- A **DynamoDB** table (`VisitorCount`)
 
----
-
-## 🚀 Components
-
-| Component        | Service           | Description |
-|------------------|-------------------|-------------|
-| Compute          | AWS Lambda        | Python 3.x function for counting site visits |
-| API Layer        | API Gateway v2    | Public HTTP endpoint (`/UpdateVisitorCount`) |
-| Data Layer       | DynamoDB          | NoSQL table tracking visitor counts |
-| IaC              | Terraform         | Declarative deployment of all AWS resources |
-| CI/CD            | GitHub Actions    | Split pipelines for infra and function code |
+Each time someone visits my resume, the Lambda increments a counter—so you can see real-time visitor stats on the frontend.
 
 ---
 
-## 🧱 Directory Structure
+## How It Links to the Frontend
 
-```
-resume-api-backend/
-├── lambda_function.py           # Lambda visitor counter logic
-├── infra/                       # Terraform IaC
-│   ├── main.tf
-│   ├── outputs.tf
-│   ├── variables.tf
-└── .github/
-    └── workflows/
-        ├── infra.yml            # Deploys infrastructure
-        └── lambda-deploy.yml    # Updates Lambda code directly
-```
+The frontend (in [resume-api-frontend](https://github.com/hybridmulticloud/resume-api-frontend)) downloads two artifacts that this backend emits:
+
+1. **API Gateway URL** (`api_gateway_url`)  
+2. **CloudFront Distribution ID** (`cloudfront_distribution_id`)
+
+These values let the static site call the visitor-count API and invalidate its cache whenever we deploy.
 
 ---
 
-## ⚙️ How It Works
+## Architecture
 
-### Frontend JS (in hybridmulti.cloud) does:
+```plaintext
+                                                          +----------------------+
+                                                          |  DynamoDB Visitor    |
+                                                          |      Count Table     |
+                                                          +----------+-----------+
+                                                                     ^
+                                                                     |
+                            +-------------+                  +--------+--------+
+                            |   API       |    Invoke      | Lambda Function |
+      Route53 Alias         |  Gateway    | ─────────────> | UpdateVisitor   |
+   hybridmulti.cloud  ──►   +-------------+                +-----------------+
 
-```js
-fetch("https://<api-id>.execute-api.<region>.amazonaws.com/UpdateVisitorCount", {
-  method: "POST",
-  body: JSON.stringify({})
-});
-```
+Prerequisites
+Terraform ≥ 1.5.7
 
-### Backend Lambda Function:
+AWS credentials with permissions to create: IAM, Lambda, DynamoDB, API Gateway
 
-- Increments `visits` in DynamoDB table `VisitorCount`
-- Returns the updated count
+GitHub Actions runner (CI/CD) with secrets configured (see below)
 
----
+Quick Start
+Clone and enter the repo
 
-## 📦 Deployment Instructions
+bash
+git clone https://github.com/hybridmulticloud/resume-api-backend.git
+cd resume-api-backend
+(Optional) Override defaults in variables.tf.
 
-### 1️⃣ Provision AWS Infrastructure
+Bootstrap your environment and deploy:
 
-Trigger GitHub Actions: **`.github/workflows/infra.yml`** or run manually:
-
-```bash
-cd infra
+bash
 terraform init
-terraform apply
-```
+terraform fmt
+terraform validate
+terraform plan   # review
+terraform apply  # provision
+Note the API Gateway URL and CloudFront ID printed at the end.
 
-Creates:
-- Lambda function (no ZIP file attached)
-- IAM role (with least privilege)
-- API Gateway integration
-- DynamoDB table (with seeded counter)
+Switch to the frontend repo, update its workflow secrets/placeholders with these values, then trigger deployment.
 
----
+Outputs
+Name	Description
+api_gateway_url	Full POST URL for visitor-count endpoint
+api_endpoint	Base API Gateway URL
+cloudfront_distribution_id	Frontend CloudFront Distribution identifier
+dynamodb_table_name	Name of the DynamoDB table
+lambda_function_name	Deployed Lambda function name
+lambda_execution_role_arn	IAM role ARN used by the Lambda function
+CI/CD
+A GitHub Actions workflow (.github/workflows/deploy-backend.yml) automatically:
 
-### 2️⃣ Deploy Lambda Code
+Formats & validates Terraform
 
-Triggered automatically on `lambda_function.py` changes via **`.github/workflows/lambda-deploy.yml`**
+Runs plan & apply on main
 
-Or run locally:
-```bash
-zip function.zip lambda_function.py
-aws lambda update-function-code \
-  --function-name UpdateVisitorCount \
-  --zip-file fileb://function.zip
-```
+Exposes api-url & cloudfront-id artifacts for the frontend to consume
 
----
-
-## 🔐 IAM & Security
-
-- Lambda has minimal access: `dynamodb:GetItem`, `dynamodb:UpdateItem`
-- Lambda logs to CloudWatch
-- API Gateway CORS restricted to `https://hybridmulti.cloud`
-
----
-
-## 📤 Outputs
-
-Run `terraform output` to get:
-- `api_gateway_url` — ready to plug into frontend
-- `dynamodb_table_name` — current storage table
-- `lambda_function_name` — deployed name for updates
-
----
-
-## ✍️ Author
-
-**Kerem Kirci** – Senior Technical Consultant  
-🔗 [linkedin.com/in/kerem-kirci](https://linkedin.com/in/kerem-kirci)  
-🌐 [https://hybridmulti.cloud](https://hybridmulti.cloud)
+This backend powers my resume at https://hybridmulti.cloud as part of the Cloud Resume Challenge!
