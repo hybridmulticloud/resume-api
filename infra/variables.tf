@@ -62,8 +62,3 @@ variable "route53_zone_id" {
   description = "Route53 hosted zone ID for the frontend domain"
   type        = string
 }
-
-variable "alert_email_address" {
-  description = "Email address to receive CloudWatch alarm notifications"
-  type        = string
-}
