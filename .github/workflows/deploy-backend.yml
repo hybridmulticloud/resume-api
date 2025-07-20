@@ -2,7 +2,8 @@ name: Deploy + Import Frontend Infra
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - infra/**
       - lambda_function.py
@@ -10,6 +11,7 @@ on:
 
 jobs:
   deploy_backend:
+    name: Apply Terraform Infra
     runs-on: ubuntu-latest
     env:
       AWS_REGION:                ${{ secrets.AWS_REGION }}
@@ -21,7 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Terraform
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
@@ -47,6 +56,7 @@ jobs:
           path: infra/*.txt
 
   import_frontend:
+    name: Import Existing Frontend Resources
     needs: deploy_backend
     runs-on: ubuntu-latest
     env:
@@ -54,7 +64,7 @@ jobs:
       AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-      TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}  
+      TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}
 
     steps:
       - uses: actions/checkout@v3
@@ -65,7 +75,14 @@ jobs:
           name: infra-outputs
           path: infra
 
-      - name: Setup Terraform
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
@@ -74,29 +91,60 @@ jobs:
         working-directory: infra
         run: terraform init -input=false
 
-      - name: Import S3 bucket
-        working-directory: infra
-        run: terraform import aws_s3_bucket.frontend "$(cat frontend_bucket_name.txt)"
-
-      - name: Import public access block
-        working-directory: infra
-        run: terraform import aws_s3_bucket_public_access_block.frontend "$(cat frontend_bucket_name.txt)"
-
-      - name: Import CloudFront OAC
-        working-directory: infra
-        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "$(cat cloudfront_oac_id.txt)"
-
-      - name: Import CloudFront distribution
-        working-directory: infra
-        run: terraform import aws_cloudfront_distribution.frontend "$(cat cloudfront_distribution_id.txt)"
-
-      - name: Import S3 bucket policy
-        working-directory: infra
-        run: terraform import aws_s3_bucket_policy.frontend "$(cat frontend_bucket_name.txt)"
-
-      - name: Import Route53 A record
+      - name: Import S3 bucket if missing
         working-directory: infra
         run: |
-          terraform import \
-            aws_route53_record.frontend_alias \
-            "$(cat route53_zone_id.txt)_$(cat frontend_bucket_name.txt)_A"
+          BUCKET=$(cat frontend_bucket_name.txt)
+          if ! terraform state list | grep -q "^aws_s3_bucket\.frontend$"; then
+            terraform import aws_s3_bucket.frontend "$BUCKET"
+          else
+            echo "✅ aws_s3_bucket.frontend already in state, skipping import"
+          fi
+
+      - name: Import S3 public access block if missing
+        working-directory: infra
+        run: |
+          if ! terraform state list | grep -q "^aws_s3_bucket_public_access_block\.frontend$"; then
+            terraform import aws_s3_bucket_public_access_block.frontend "$BUCKET"
+          else
+            echo "✅ aws_s3_bucket_public_access_block.frontend already in state"
+          fi
+
+      - name: Import CloudFront OAC if missing
+        working-directory: infra
+        run: |
+          OAC_ID=$(cat cloudfront_oac_id.txt)
+          if ! terraform state list | grep -q "^aws_cloudfront_origin_access_control\.frontend_oac$"; then
+            terraform import aws_cloudfront_origin_access_control.frontend_oac "$OAC_ID"
+          else
+            echo "✅ aws_cloudfront_origin_access_control.frontend_oac already in state"
+          fi
+
+      - name: Import CloudFront distribution if missing
+        working-directory: infra
+        run: |
+          DIST_ID=$(cat cloudfront_distribution_id.txt)
+          if ! terraform state list | grep -q "^aws_cloudfront_distribution\.frontend$"; then
+            terraform import aws_cloudfront_distribution.frontend "$DIST_ID"
+          else
+            echo "✅ aws_cloudfront_distribution.frontend already in state"
+          fi
+
+      - name: Import S3 bucket policy if missing
+        working-directory: infra
+        run: |
+          if ! terraform state list | grep -q "^aws_s3_bucket_policy\.frontend$"; then
+            terraform import aws_s3_bucket_policy.frontend "$BUCKET"
+          else
+            echo "✅ aws_s3_bucket_policy.frontend already in state"
+          fi
+
+      - name: Import Route53 A record if missing
+        working-directory: infra
+        run: |
+          ZONE_ID=$(cat route53_zone_id.txt)
+          if ! terraform state list | grep -q "^aws_route53_record\.frontend_alias$"; then
+            terraform import aws_route53_record.frontend_alias "${ZONE_ID}_${BUCKET}_A"
+          else
+            echo "✅ aws_route53_record.frontend_alias already in state"
+          fi
