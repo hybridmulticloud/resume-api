@@ -1,80 +1,86 @@
 name: Deploy Backend Infrastructure
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "infra/**"
-      - "lambda_function.py"
-      - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
+    inputs:
+      frontend_domain:
+        description: 'Your frontend domain (and S3 bucket name)'
+        required: true
+        default: 'hybridmulti.cloud'
+      cloudfront_distribution_id:
+        description: 'Existing CloudFront distribution ID'
+        required: true
+      cloudfront_oac_id:
+        description: 'Existing CloudFront Origin Access Control ID'
+        required: true
+      route53_zone_id:
+        description: 'Route53 Hosted Zone ID'
+        required: true
 
 jobs:
   terraform_imports:
-    name: Import Existing Infra
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     env:
-      AWS_REGION:             ${{ secrets.AWS_REGION }}
-      AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION:                ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-      TF_VAR_route53_zone_id:        ${{ secrets.ROUTE53_ZONE_ID }}
-      TF_VAR_frontend_bucket_name:   ${{ secrets.FRONTEND_BUCKET_NAME }}
-      TF_VAR_frontend_domain:        ${{ secrets.FRONTEND_DOMAIN }}
-      TF_VAR_cloudfront_origin_id:   ${{ secrets.CLOUDFRONT_ORIGIN_ID }}
-      TF_VAR_ssl_min_protocol_version: "TLSv1.2_2021"
-    
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
 
-      - name: Setup Terraform CLI
+      # derive everything from one input
+      TF_VAR_frontend_domain:        ${{ github.event.inputs.frontend_domain }}
+      TF_VAR_frontend_bucket_name:   ${{ github.event.inputs.frontend_domain }}
+      TF_VAR_route53_zone_id:        ${{ github.event.inputs.route53_zone_id }}
+      TF_VAR_cloudfront_origin_id:   ${{ github.event.inputs.cloudfront_oac_id }}
+      TF_VAR_ssl_min_protocol_version: "TLSv1.2_2021"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
+        with: terraform_version: 1.5.7
 
       - name: Terraform Init
         working-directory: infra
         run: terraform init -input=false
 
-      - name: Import existing S3 bucket
+      - name: Import S3 bucket
         working-directory: infra
-        run: terraform import aws_s3_bucket.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket.frontend "${{ github.event.inputs.frontend_domain }}"
 
       - name: Import public access block
         working-directory: infra
-        run: terraform import aws_s3_bucket_public_access_block.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket_public_access_block.frontend "${{ github.event.inputs.frontend_domain }}"
 
       - name: Import CloudFront OAC
         working-directory: infra
-        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "${{ secrets.CLOUDFRONT_OAC_ID }}"
+        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "${{ github.event.inputs.cloudfront_oac_id }}"
 
       - name: Import CloudFront distribution
         working-directory: infra
-        run: terraform import aws_cloudfront_distribution.frontend "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+        run: terraform import aws_cloudfront_distribution.frontend "${{ github.event.inputs.cloudfront_distribution_id }}"
 
       - name: Import S3 bucket policy
         working-directory: infra
-        run: terraform import aws_s3_bucket_policy.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket_policy.frontend "${{ github.event.inputs.frontend_domain }}"
 
-      - name: Import Route53 record
+      - name: Import Route53 A record
         working-directory: infra
-        run: terraform import aws_route53_record.frontend_alias "${{ secrets.ROUTE53_ZONE_ID }}_${{ secrets.FRONTEND_DOMAIN }}_A"
+        run: terraform import aws_route53_record.frontend_alias "${{ github.event.inputs.route53_zone_id }}_${{ github.event.inputs.frontend_domain }}_A"
 
   terraform_backend:
-    name: Apply Terraform Infra
-    needs: [terraform_imports]
+    needs: terraform_imports
     runs-on: ubuntu-latest
-
     env:
+      AWS_REGION:                ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-      TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}
+      TF_VAR_route53_zone_id:    ${{ github.event.inputs.route53_zone_id }}
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -85,42 +91,26 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
+        with: terraform_version: 1.5.7
 
       - name: Terraform Init
         working-directory: infra
-        run: terraform init -input=false -lock-timeout=2m
+        run: terraform init -input=false
 
       - name: Terraform Plan
         working-directory: infra
-        run: terraform plan -out=tfplan -input=false -lock-timeout=2m
+        run: terraform plan -out=tfplan -input=false
 
       - name: Terraform Apply
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         working-directory: infra
-        run: terraform apply -auto-approve -input=false -lock-timeout=2m
+        run: terraform apply -auto-approve -input=false
 
-      - name: Output API Gateway URL
-        if: success()
-        working-directory: infra
-        run: terraform output -raw api_gateway_url > ../api_url.txt
-
-      - name: Output CloudFront ID
-        if: success()
-        working-directory: infra
-        run: terraform output -raw cloudfront_distribution_id > ../cloudfront_id.txt
-
-      - name: Upload API URL
+      - name: Upload Outputs
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: api-url
-          path: api_url.txt
-
-      - name: Upload CloudFront ID
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cloudfront-id
-          path: cloudfront_id.txt
+          name: api-and-cdn-info
+          path: |
+            infra/api_url.txt
+            infra/cloudfront_id.txt
