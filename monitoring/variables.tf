@@ -1,13 +1,16 @@
 variable "aws_region" {
-  type    = string
-  default = "us-east-1"
+  description = "AWS region for monitoring resources"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "project_name" {
-  type    = string
-  default = "resume-api"
+  description = "Base name for SNS topic & dashboard"
+  type        = string
+  default     = "resume-api"
 }
 
 variable "alert_email_address" {
-  type = string
+  description = "Recipient e-mail for SNS alarm notifications"
+  type        = string
 }
