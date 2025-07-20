@@ -36,19 +36,22 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # auto‐format all your .tf files in monitoring/
-      - name: Terraform Fmt (auto‐fix)
-        working-directory: monitoring
-        run: terraform fmt -recursive
-
-      - name: Terraform Validate
-        working-directory: monitoring
-        run: terraform validate
-
+      # 1) Init first so providers & backends are installed
       - name: Terraform Init
         working-directory: monitoring
         run: terraform init -input=false -lockfile=readonly
 
+      # 2) Auto-format your .tf files
+      - name: Terraform Fmt
+        working-directory: monitoring
+        run: terraform fmt -recursive
+
+      # 3) Now validate—providers are available
+      - name: Terraform Validate
+        working-directory: monitoring
+        run: terraform validate
+
+      # 4) Plan & Apply
       - name: Terraform Plan
         working-directory: monitoring
         run: terraform plan -out=tfplan -input=false
