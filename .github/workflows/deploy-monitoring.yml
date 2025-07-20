@@ -39,7 +39,7 @@ jobs:
       # 1) Init first so providers & backends are installed
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init -input=false -lockfile=readonly
+        run: terraform init -input=false
 
       # 2) Auto-format your .tf files
       - name: Terraform Fmt
