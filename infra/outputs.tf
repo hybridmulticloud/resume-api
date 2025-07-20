@@ -13,6 +13,11 @@ output "cloudfront_distribution_id" {
   value       = aws_cloudfront_distribution.frontend.id
 }
 
+output "cloudfront_oac_id" {
+  description = "CloudFront Origin Access Control ID for frontend"
+  value       = aws_cloudfront_origin_access_control.frontend_oac.id
+}
+
 output "dynamodb_table_name" {
   description = "DynamoDB table name"
   value       = aws_dynamodb_table.visitor_count.name
@@ -31,4 +36,9 @@ output "lambda_execution_role_arn" {
 output "lambda_exec_role_name" {
   description = "Name of the Lambda execution role"
   value       = aws_iam_role.lambda_exec.name
+}
+
+output "route53_zone_id" {
+  description = "Route53 Hosted Zone ID"
+  value       = var.route53_zone_id
 }
