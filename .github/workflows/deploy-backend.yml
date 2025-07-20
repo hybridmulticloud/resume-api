@@ -2,8 +2,7 @@ name: Deploy + Import Frontend Infra
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - infra/**
       - lambda_function.py
@@ -14,14 +13,15 @@ jobs:
     name: Apply Terraform Infra
     runs-on: ubuntu-latest
     env:
-      AWS_REGION:               ${{ secrets.AWS_REGION }}
-      AWS_ACCESS_KEY_ID:        ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY:    ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION:                ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
       TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -44,38 +44,40 @@ jobs:
       - name: Export Frontend IDs
         working-directory: infra
         run: |
-          terraform output -raw cloudfront_oac_id         > ../cloudfront_oac_id.txt
-          terraform output -raw cloudfront_distribution_id > ../cloudfront_distribution_id.txt
-          terraform output -raw route53_zone_id            > ../route53_zone_id.txt
-          terraform output -raw frontend_bucket_name       > ../frontend_bucket_name.txt
+          # Write the four IDs into files _next_ to infra/
+          mkdir -p ../tf-ids
+          terraform output -raw cloudfront_oac_id        > ../tf-ids/cloudfront_oac_id.txt
+          terraform output -raw cloudfront_distribution_id > ../tf-ids/cloudfront_distribution_id.txt
+          terraform output -raw route53_zone_id           > ../tf-ids/route53_zone_id.txt
+          terraform output -raw frontend_bucket_name      > ../tf-ids/frontend_bucket_name.txt
 
       - name: Upload IDs
         uses: actions/upload-artifact@v4
         with:
           name: infra-outputs
-          path: |
-            cloudfront_oac_id.txt
-            cloudfront_distribution_id.txt
-            route53_zone_id.txt
-            frontend_bucket_name.txt
+          path: tf-ids
 
   import_frontend:
     name: Import Existing Frontend Resources
     needs: deploy_backend
     runs-on: ubuntu-latest
     env:
-      AWS_REGION:               ${{ secrets.AWS_REGION }}
-      AWS_ACCESS_KEY_ID:        ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY:    ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION:                ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      # We still need this for terraform init to succeed
+      TF_VAR_route53_zone_id:    ${{ secrets.ROUTE53_ZONE_ID }}  
 
     steps:
       - name: Download infra-outputs
         uses: actions/download-artifact@v4
         with:
           name: infra-outputs
+          path: tf-ids
 
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -95,24 +97,42 @@ jobs:
 
       - name: Import S3 bucket
         working-directory: infra
-        run: terraform import aws_s3_bucket.frontend "$(cat frontend_bucket_name.txt)"
+        run: |
+          terraform import \
+            aws_s3_bucket.frontend \
+            "$(cat ../tf-ids/frontend_bucket_name.txt)"
 
       - name: Import public access block
         working-directory: infra
-        run: terraform import aws_s3_bucket_public_access_block.frontend "$(cat frontend_bucket_name.txt)"
+        run: |
+          terraform import \
+            aws_s3_bucket_public_access_block.frontend \
+            "$(cat ../tf-ids/frontend_bucket_name.txt)"
 
       - name: Import CloudFront OAC
         working-directory: infra
-        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "$(cat cloudfront_oac_id.txt)"
+        run: |
+          terraform import \
+            aws_cloudfront_origin_access_control.frontend_oac \
+            "$(cat ../tf-ids/cloudfront_oac_id.txt)"
 
       - name: Import CloudFront distribution
         working-directory: infra
-        run: terraform import aws_cloudfront_distribution.frontend "$(cat cloudfront_distribution_id.txt)"
+        run: |
+          terraform import \
+            aws_cloudfront_distribution.frontend \
+            "$(cat ../tf-ids/cloudfront_distribution_id.txt)"
 
       - name: Import S3 bucket policy
         working-directory: infra
-        run: terraform import aws_s3_bucket_policy.frontend "$(cat frontend_bucket_name.txt)"
+        run: |
+          terraform import \
+            aws_s3_bucket_policy.frontend \
+            "$(cat ../tf-ids/frontend_bucket_name.txt)"
 
       - name: Import Route53 A record
         working-directory: infra
-        run: terraform import aws_route53_record.frontend_alias "$(cat route53_zone_id.txt)_$(cat frontend_bucket_name.txt)_A"
+        run: |
+          terraform import \
+            aws_route53_record.frontend_alias \
+            "$(cat ../tf-ids/route53_zone_id.txt)_$(cat ../tf-ids/frontend_bucket_name.txt)_A"
