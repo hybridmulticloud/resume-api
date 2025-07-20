@@ -2,7 +2,8 @@ name: Deploy + Import Frontend Infra
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - infra/**
       - lambda_function.py
@@ -43,10 +44,10 @@ jobs:
       - name: Export Frontend IDs
         working-directory: infra
         run: |
-          terraform output -raw cloudfront_oac_id        > ../cloudfront_oac_id.txt
+          terraform output -raw cloudfront_oac_id         > ../cloudfront_oac_id.txt
           terraform output -raw cloudfront_distribution_id > ../cloudfront_distribution_id.txt
-          terraform output -raw route53_zone_id           > ../route53_zone_id.txt
-          terraform output -raw frontend_bucket_name      > ../frontend_bucket_name.txt
+          terraform output -raw route53_zone_id            > ../route53_zone_id.txt
+          terraform output -raw frontend_bucket_name       > ../frontend_bucket_name.txt
 
       - name: Upload IDs
         uses: actions/upload-artifact@v4
@@ -74,13 +75,6 @@ jobs:
         with:
           name: infra-outputs
 
-      - name: Set IDs into environment
-        run: |
-          echo "CLOUDFRONT_OAC_ID=$(cat cloudfront_oac_id.txt)"        >> $GITHUB_ENV
-          echo "CLOUDFRONT_DIST_ID=$(cat cloudfront_distribution_id.txt)" >> $GITHUB_ENV
-          echo "ROUTE53_ZONE_ID=$(cat route53_zone_id.txt)"             >> $GITHUB_ENV
-          echo "FRONTEND_BUCKET_NAME=$(cat frontend_bucket_name.txt)"   >> $GITHUB_ENV
-
       - uses: actions/checkout@v3
 
       - name: Configure AWS credentials
@@ -101,24 +95,24 @@ jobs:
 
       - name: Import S3 bucket
         working-directory: infra
-        run: terraform import aws_s3_bucket.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket.frontend "$(cat frontend_bucket_name.txt)"
 
       - name: Import public access block
         working-directory: infra
-        run: terraform import aws_s3_bucket_public_access_block.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket_public_access_block.frontend "$(cat frontend_bucket_name.txt)"
 
       - name: Import CloudFront OAC
         working-directory: infra
-        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "${{ env.CLOUDFRONT_OAC_ID }}"
+        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "$(cat cloudfront_oac_id.txt)"
 
       - name: Import CloudFront distribution
         working-directory: infra
-        run: terraform import aws_cloudfront_distribution.frontend "${{ env.CLOUDFRONT_DIST_ID }}"
+        run: terraform import aws_cloudfront_distribution.frontend "$(cat cloudfront_distribution_id.txt)"
 
       - name: Import S3 bucket policy
         working-directory: infra
-        run: terraform import aws_s3_bucket_policy.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+        run: terraform import aws_s3_bucket_policy.frontend "$(cat frontend_bucket_name.txt)"
 
       - name: Import Route53 A record
         working-directory: infra
-        run: terraform import aws_route53_record.frontend_alias "${{ env.ROUTE53_ZONE_ID }}_${{ env.FRONTEND_BUCKET_NAME }}_A"
+        run: terraform import aws_route53_record.frontend_alias "$(cat route53_zone_id.txt)_$(cat frontend_bucket_name.txt)_A"
