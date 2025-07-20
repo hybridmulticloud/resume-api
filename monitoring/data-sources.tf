@@ -3,9 +3,7 @@ data "terraform_remote_state" "backend" {
 
   config = {
     organization = "hybridmulticloud"
-    workspaces = {
-      name = "resume-api-backend"
-    }
+    workspaces   = { name = "resume-api-backend" }
   }
 }
 
