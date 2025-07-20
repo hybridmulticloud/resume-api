@@ -1,26 +1,21 @@
 #########################################################
 # monitoring.tf
-#
-# Enables X-Ray tracing, SNS e-mail alerts, CloudWatch alarms,
-# and a dashboard for your Lambda + DynamoDB stack.
+#   Pulls Lambda, Role & Table names from remote state
+#   then:
+#     1) grants X-Ray IAM policy
+#     2) toggles Active tracing on the function
+#     3) creates SNS topic + email subscription
+#     4) sets up CloudWatch alarms
+#     5) builds a CloudWatch dashboard
 #########################################################
 
-##################################
-# Data sources
-##################################
-data "aws_caller_identity" "current" {}
-
-data "aws_region" "current" {}
-
-##################################
-# 1) Grant X-Ray permissions to Lambda execution role
-##################################
+# 1) Attach X-Ray policy to the Lambda exec role
 resource "aws_iam_role_policy" "lambda_xray" {
-  name = "${var.project_name}-lambda-xray-policy"
-  role = aws_iam_role.lambda_exec.id
+  name = "${data.terraform_remote_state.backend.outputs.project_name}-lambda-xray-policy"
+  role = data.terraform_remote_state.backend.outputs.lambda_execution_role_arn
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = [
@@ -34,109 +29,83 @@ resource "aws_iam_role_policy" "lambda_xray" {
   })
 }
 
-##################################
-# 2) Enable Active tracing on your existing Lambda function
-#
-#    This recreates the function with the same config plus tracing.
-##################################
-resource "aws_lambda_function" "update_visitor_count_traced" {
-  function_name    = aws_lambda_function.update_visitor_count.function_name
-  role             = aws_lambda_function.update_visitor_count.role
-  handler          = aws_lambda_function.update_visitor_count.handler
-  runtime          = aws_lambda_function.update_visitor_count.runtime
-  filename         = aws_lambda_function.update_visitor_count.filename
-  source_code_hash = aws_lambda_function.update_visitor_count.source_code_hash
+# 2) Re-create the Lambda with Active tracing enabled
+resource "aws_lambda_function" "traced" {
+  function_name    = data.terraform_remote_state.backend.outputs.lambda_function_name
+  role             = data.terraform_remote_state.backend.outputs.lambda_execution_role_arn
+  handler          = data.terraform_remote_state.backend.outputs.lambda_handler
+  runtime          = data.terraform_remote_state.backend.outputs.lambda_runtime
+  filename         = data.terraform_remote_state.backend.outputs.lambda_artifact_filename
+  source_code_hash = data.terraform_remote_state.backend.outputs.lambda_artifact_hash
 
-  environment {
-    variables = aws_lambda_function.update_visitor_count.environment[0].variables
-  }
-
-  tracing_config {
-    mode = "Active"
-  }
+  tracing_config { mode = "Active" }
 
   lifecycle {
-    ignore_changes = [
-      filename,
-      source_code_hash
-    ]
+    ignore_changes = [ filename, source_code_hash ]
   }
 
-  depends_on = [
-    aws_iam_role_policy.lambda_xray
-  ]
+  depends_on = [ aws_iam_role_policy.lambda_xray ]
 }
 
-##################################
-# 3) SNS Topic & Email Subscription
-##################################
+# 3) SNS topic + email subscription
 resource "aws_sns_topic" "alarms" {
-  name = "${var.project_name}-alarms-topic"
-  tags = {
-    Project = var.project_name
-  }
+  name = "${data.terraform_remote_state.backend.outputs.project_name}-alarms-topic"
 }
 
-resource "aws_sns_topic_subscription" "email_alert" {
+resource "aws_sns_topic_subscription" "email" {
   topic_arn = aws_sns_topic.alarms.arn
   protocol  = "email"
   endpoint  = var.alert_email_address
 }
 
-##################################
-# 4) CloudWatch Metric Alarms
-##################################
+# 4) CloudWatch alarms (errors, duration, throttles)
+locals {
+  fn_name = data.terraform_remote_state.backend.outputs.lambda_function_name
+  tbl_name = data.terraform_remote_state.backend.outputs.dynamodb_table_name
+}
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  alarm_name          = "${var.project_name}-lambda-errors"
-  alarm_description   = "Lambda errors ≥ 1 in 5m"
+  alarm_name          = "${local.fn_name}-errors"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
-  dimensions          = { FunctionName = aws_lambda_function.update_visitor_count.function_name }
+  dimensions          = { FunctionName = local.fn_name }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
   alarm_actions       = [ aws_sns_topic.alarms.arn ]
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
-  alarm_name          = "${var.project_name}-lambda-duration"
-  alarm_description   = "Lambda avg duration > 1000ms in 5m"
+  alarm_name          = "${local.fn_name}-duration"
   namespace           = "AWS/Lambda"
   metric_name         = "Duration"
-  dimensions          = { FunctionName = aws_lambda_function.update_visitor_count.function_name }
+  dimensions          = { FunctionName = local.fn_name }
   statistic           = "Average"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1000
   comparison_operator = "GreaterThanThreshold"
-  treat_missing_data  = "notBreaching"
   alarm_actions       = [ aws_sns_topic.alarms.arn ]
 }
 
 resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
-  alarm_name          = "${var.project_name}-dynamodb-throttles"
-  alarm_description   = "DynamoDB throttled requests ≥ 1 in 5m"
+  alarm_name          = "${local.tbl_name}-throttles"
   namespace           = "AWS/DynamoDB"
   metric_name         = "ThrottledRequests"
-  dimensions          = { TableName = aws_dynamodb_table.visitor_count.name }
+  dimensions          = { TableName = local.tbl_name }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
   alarm_actions       = [ aws_sns_topic.alarms.arn ]
 }
 
-##################################
-# 5) Operations Dashboard
-##################################
+# 5) Dashboard
 resource "aws_cloudwatch_dashboard" "ops" {
-  dashboard_name = "${var.project_name}-ops-dashboard"
+  dashboard_name = "${data.terraform_remote_state.backend.outputs.project_name}-ops-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -147,12 +116,12 @@ resource "aws_cloudwatch_dashboard" "ops" {
         width      = 12
         height     = 6
         properties = {
-          title   = "Lambda Invocations & Errors"
+          title   = "Invocations & Errors"
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/Lambda","Invocations","FunctionName",aws_lambda_function.update_visitor_count.function_name],
-            [".","Errors","FunctionName",aws_lambda_function.update_visitor_count.function_name,{"stat":"Sum"}]
+            ["AWS/Lambda","Invocations","FunctionName",local.fn_name],
+            [".","Errors","FunctionName",local.fn_name,{"stat":"Sum"}]
           ]
         }
       },
@@ -163,11 +132,11 @@ resource "aws_cloudwatch_dashboard" "ops" {
         width      = 12
         height     = 6
         properties = {
-          title   = "Lambda Duration (ms)"
+          title   = "Duration (ms)"
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/Lambda","Duration","FunctionName",aws_lambda_function.update_visitor_count.function_name,{"stat":"Average"}]
+            ["AWS/Lambda","Duration","FunctionName",local.fn_name,{"stat":"Average"}]
           ]
         }
       },
@@ -182,9 +151,9 @@ resource "aws_cloudwatch_dashboard" "ops" {
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/DynamoDB","ThrottledRequests","TableName",aws_dynamodb_table.visitor_count.name],
-            [".","ConsumedReadCapacityUnits","TableName",aws_dynamodb_table.visitor_count.name,{"stat":"Sum"}],
-            [".","ConsumedWriteCapacityUnits","TableName",aws_dynamodb_table.visitor_count.name,{"stat":"Sum"}]
+            ["AWS/DynamoDB","ThrottledRequests","TableName",local.tbl_name],
+            [".","ConsumedReadCapacityUnits","TableName",local.tbl_name,{"stat":"Sum"}],
+            [".","ConsumedWriteCapacityUnits","TableName",local.tbl_name,{"stat":"Sum"}]
           ]
         }
       }
