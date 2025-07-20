@@ -1,11 +1,14 @@
-data "aws_iam_role" "lambda_exec" {
-  name = var.lambda_exec_role_name
+data "terraform_remote_state" "backend" {
+  backend = "remote"
+
+  config = {
+    organization = "hybridmulticloud"
+    workspaces = {
+      name = "resume-api-backend"
+    }
+  }
 }
 
-data "aws_lambda_function" "update_visitor_count" {
-  function_name = var.lambda_function_name
-}
+data "aws_caller_identity" "current" {}
 
-data "aws_dynamodb_table" "visitor_count" {
-  name = var.dynamodb_table_name
-}
+data "aws_region" "current" {}
