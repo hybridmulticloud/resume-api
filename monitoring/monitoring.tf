@@ -1,52 +1,47 @@
-#########################################################
-# monitoring.tf
-#  - Grabs function name & exec‐role name from remote state
-#  - Attaches X-Ray policy
-#  - Fires an AWS CLI proc to flip on Active tracing
-#  - Sets up SNS e-mail, alarms and dashboard
-#########################################################
-
 locals {
-  fn_name      = data.terraform_remote_state.backend.outputs.lambda_function_name
-  exec_role    = data.terraform_remote_state.backend.outputs.lambda_exec_role_name
-  table_name   = data.terraform_remote_state.backend.outputs.dynamodb_table_name
+  fn_name   = data.terraform_remote_state.backend.outputs.lambda_function_name
+  exec_role = data.terraform_remote_state.backend.outputs.lambda_exec_role_name
+  tbl_name  = data.terraform_remote_state.backend.outputs.dynamodb_table_name
 }
 
-# 1) Attach inline X-Ray policy to the Lambda exec role
 resource "aws_iam_role_policy" "lambda_xray" {
   name = "${var.project_name}-lambda-xray-policy"
   role = local.exec_role
 
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = [
+      Effect = "Allow"
+      Action = [
         "xray:BatchGetTraces",
         "xray:GetServiceGraph",
         "xray:PutTraceSegments",
-        "xray:PutTelemetryRecords"
+        "xray:PutTelemetryRecords",
       ]
       Resource = ["*"]
     }]
   })
 }
 
-# 2) Turn on Active tracing by shelling out to AWS CLI
-resource "null_resource" "enable_tracing" {
-  depends_on = [aws_iam_role_policy.lambda_xray]
+resource "aws_lambda_function" "update_visitor_count_traced" {
+  function_name    = local.fn_name
+  role             = local.exec_role
+  handler          = data.terraform_remote_state.backend.outputs.lambda_handler
+  runtime          = data.terraform_remote_state.backend.outputs.lambda_runtime
+  filename         = data.terraform_remote_state.backend.outputs.lambda_artifact_filename
+  source_code_hash = data.terraform_remote_state.backend.outputs.lambda_artifact_hash
 
-  provisioner "local-exec" {
-    command = <<EOT
-      aws lambda update-function-configuration \
-        --function-name ${local.fn_name} \
-        --tracing-config Mode=Active \
-        --region ${var.aws_region}
-    EOT
+  tracing_config {
+    mode = "Active"
   }
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
+
+  depends_on = [aws_iam_role_policy.lambda_xray]
 }
 
-# 3) SNS topic + subscription
 resource "aws_sns_topic" "alarms" {
   name = "${var.project_name}-alarms-topic"
   tags = { Project = var.project_name }
@@ -58,7 +53,6 @@ resource "aws_sns_topic_subscription" "email_alert" {
   endpoint  = var.alert_email_address
 }
 
-# 4) CloudWatch alarms
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${var.project_name}-lambda-errors"
   namespace           = "AWS/Lambda"
@@ -89,7 +83,7 @@ resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
   alarm_name          = "${var.project_name}-dynamodb-throttles"
   namespace           = "AWS/DynamoDB"
   metric_name         = "ThrottledRequests"
-  dimensions          = { TableName = local.table_name }
+  dimensions          = { TableName = local.tbl_name }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
@@ -98,10 +92,8 @@ resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
   alarm_actions       = [aws_sns_topic.alarms.arn]
 }
 
-# 5) Dashboard
 resource "aws_cloudwatch_dashboard" "ops" {
   dashboard_name = "${var.project_name}-ops-dashboard"
-
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -115,8 +107,8 @@ resource "aws_cloudwatch_dashboard" "ops" {
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/Lambda","Invocations","FunctionName",local.fn_name],
-            [".","Errors","FunctionName",local.fn_name,{"stat"="Sum"}]
+            ["AWS/Lambda", "Invocations", "FunctionName", local.fn_name],
+            [".", "Errors", "FunctionName", local.fn_name, {"stat" = "Sum"}],
           ]
         }
       },
@@ -131,7 +123,7 @@ resource "aws_cloudwatch_dashboard" "ops" {
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/Lambda","Duration","FunctionName",local.fn_name,{"stat"="Average"}]
+            ["AWS/Lambda", "Duration", "FunctionName", local.fn_name, {"stat" = "Average"}],
           ]
         }
       },
@@ -146,9 +138,9 @@ resource "aws_cloudwatch_dashboard" "ops" {
           view    = "timeSeries"
           region  = var.aws_region
           metrics = [
-            ["AWS/DynamoDB","ThrottledRequests","TableName",local.table_name],
-            [".","ConsumedReadCapacityUnits","TableName",local.table_name,{"stat"="Sum"}],
-            [".","ConsumedWriteCapacityUnits","TableName",local.table_name,{"stat"="Sum"}]
+            ["AWS/DynamoDB", "ThrottledRequests", "TableName", local.tbl_name],
+            [".", "ConsumedReadCapacityUnits", "TableName", local.tbl_name, {"stat" = "Sum"}],
+            [".", "ConsumedWriteCapacityUnits", "TableName", local.tbl_name, {"stat" = "Sum"}],
           ]
         }
       }
