@@ -2,12 +2,13 @@ name: Deploy Backend Infrastructure
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - "infra/**"
       - "lambda_function.py"
       - ".github/workflows/deploy-backend.yml"
- workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   terraform_backend:
@@ -43,24 +44,29 @@ jobs:
         run: terraform plan -out=tfplan -input=false -lock-timeout=2m
 
       - name: Terraform Apply
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         working-directory: infra
         run: terraform apply -auto-approve -input=false -lock-timeout=2m
 
       - name: Output API Gateway URL
+        if: success()
         working-directory: infra
         run: terraform output -raw api_gateway_url > ../api_url.txt
 
       - name: Output CloudFront ID
+        if: success()
         working-directory: infra
         run: terraform output -raw cloudfront_distribution_id > ../cloudfront_id.txt
 
       - name: Upload API URL
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: api-url
           path: api_url.txt
 
       - name: Upload CloudFront ID
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: cloudfront-id
