@@ -1,118 +1,129 @@
-resource "aws_s3_bucket" "frontend" {
-  bucket = var.frontend_bucket_name
-  acl    = "private"
+name: Deploy Backend Infrastructure
 
-  tags = {
-    Project = var.project_name
-  }
-}
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - infra/**
+      - lambda_function.py
+      - .github/workflows/deploy-backend.yml
+  workflow_dispatch:
 
-resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+jobs:
+  terraform_backend:
+    name: Apply Terraform Infra
+    runs-on: ubuntu-latest
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
+    env:
+      AWS_REGION:               ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:        ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:    ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
 
-data "aws_acm_certificate" "frontend_cert" {
-  provider    = aws.us_east_1
-  domain      = var.frontend_domain
-  statuses    = ["ISSUED"]
-  most_recent = true
-}
+      # var.route53_zone_id will be set via TF_VAR_… so we can output it later
+      TF_VAR_route53_zone_id:   ${{ secrets.ROUTE53_ZONE_ID }}
 
-resource "aws_cloudfront_origin_access_control" "frontend_oac" {
-  name                              = "frontend-oac"
-  description                       = "OAC for frontend static site"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
 
-resource "aws_cloudfront_distribution" "frontend" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "CDN for ${var.frontend_domain}"
-  default_root_object = var.index_document
-  aliases             = [var.frontend_domain]
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
 
-  origin {
-    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id                = var.cloudfront_origin_id
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
-  }
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
 
-  default_cache_behavior {
-    target_origin_id       = var.cloudfront_origin_id
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-  }
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan -out=tfplan -input=false
 
-  price_class = "PriceClass_100"
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
 
-  viewer_certificate {
-    acm_certificate_arn      = data.aws_acm_certificate.frontend_cert.arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = var.ssl_min_protocol_version
-  }
+      - name: Export all IDs from remote state
+        working-directory: infra
+        run: |
+          terraform output -raw cloudfront_oac_id       > ../cloudfront_oac_id.txt
+          terraform output -raw cloudfront_distribution_id > ../cloudfront_distribution_id.txt
+          terraform output -raw route53_zone_id          > ../route53_zone_id.txt
 
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
+      - name: Upload IDs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: infra-ids
+          path: |
+            cloudfront_oac_id.txt
+            cloudfront_distribution_id.txt
+            route53_zone_id.txt
 
-  tags = {
-    Project = var.project_name
-  }
-}
+  terraform_imports:
+    name: Import Existing Frontend Infra
+    runs-on: ubuntu-latest
+    needs: terraform_backend
+    if: github.event_name == 'workflow_dispatch'  # optional guard
 
-data "aws_iam_policy_document" "allow_cloudfront" {
-  statement {
-    sid     = "AllowCloudFrontServicePrincipal"
-    effect  = "Allow"
+    env:
+      AWS_REGION:               ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:        ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:    ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
 
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
+    steps:
+      - name: Download infra-ids artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: infra-ids
 
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.frontend.arn}/*"]
+      - name: Read IDs into env
+        run: |
+          echo "CLOUDFRONT_OAC_ID=$(cat cloudfront_oac_id.txt)" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DIST_ID=$(cat cloudfront_distribution_id.txt)" >> $GITHUB_ENV
+          echo "ROUTE53_ZONE_ID=$(cat route53_zone_id.txt)" >> $GITHUB_ENV
 
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [
-        "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.frontend.id}"
-      ]
-    }
-  }
-}
+      - name: Checkout source
+        uses: actions/checkout@v3
 
-resource "aws_s3_bucket_policy" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-  policy = data.aws_iam_policy_document.allow_cloudfront.json
-}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
 
-resource "aws_route53_record" "frontend_alias" {
-  zone_id = var.route53_zone_id
-  name    = var.frontend_domain
-  type    = "A"
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
 
-  alias {
-    name                   = aws_cloudfront_distribution.frontend.domain_name
-    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
+      - name: Import S3 bucket
+        working-directory: infra
+        run: terraform import aws_s3_bucket.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import S3 public access block
+        working-directory: infra
+        run: terraform import aws_s3_bucket_public_access_block.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import CloudFront OAC
+        working-directory: infra
+        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "${{ env.CLOUDFRONT_OAC_ID }}"
+
+      - name: Import CloudFront distribution
+        working-directory: infra
+        run: terraform import aws_cloudfront_distribution.frontend "${{ env.CLOUDFRONT_DIST_ID }}"
+
+      - name: Import S3 bucket policy
+        working-directory: infra
+        run: terraform import aws_s3_bucket_policy.frontend "${{ env.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import Route53 A record
+        working-directory: infra
+        run: terraform import aws_route53_record.frontend_alias "${{ env.ROUTE53_ZONE_ID }}_${{ env.FRONTEND_BUCKET_NAME }}_A"
