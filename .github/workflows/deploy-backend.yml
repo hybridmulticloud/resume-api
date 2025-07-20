@@ -44,6 +44,7 @@ jobs:
       - name: Export Frontend IDs
         working-directory: infra
         run: |
+          terraform output -raw api_gateway_url            > api_gateway_url.txt
           terraform output -raw cloudfront_oac_id         > cloudfront_oac_id.txt
           terraform output -raw cloudfront_distribution_id > cloudfront_distribution_id.txt
           terraform output -raw route53_zone_id            > route53_zone_id.txt
