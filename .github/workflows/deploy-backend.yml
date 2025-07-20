@@ -20,8 +20,12 @@ jobs:
       AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-      ROUTE53_ZONE_ID:        ${{ secrets.ROUTE53_ZONE_ID }}
-      FRONTEND_DOMAIN:        ${{ secrets.FRONTEND_DOMAIN }}
+      TF_VAR_route53_zone_id:        ${{ secrets.ROUTE53_ZONE_ID }}
+      TF_VAR_frontend_bucket_name:   ${{ secrets.FRONTEND_BUCKET_NAME }}
+      TF_VAR_frontend_domain:        ${{ secrets.FRONTEND_DOMAIN }}
+      TF_VAR_cloudfront_origin_id:   ${{ secrets.CLOUDFRONT_ORIGIN_ID }}
+      TF_VAR_ssl_min_protocol_version: "TLSv1.2_2021"
+    
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
