@@ -18,6 +18,11 @@ output "cloudfront_oac_id" {
   value       = aws_cloudfront_origin_access_control.frontend_oac.id
 }
 
+output "frontend_bucket_name" {
+  description = "S3 bucket name for frontend"
+  value       = var.frontend_bucket_name
+}
+
 output "dynamodb_table_name" {
   description = "DynamoDB table name"
   value       = aws_dynamodb_table.visitor_count.name
