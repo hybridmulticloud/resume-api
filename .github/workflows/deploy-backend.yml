@@ -1,4 +1,4 @@
-name: Deploy + Import Frontend Infra
+name: Deploy Backend Infrastructure
 
 on:
   push:
