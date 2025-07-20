@@ -1,10 +1,20 @@
 #########################################################
 # monitoring.tf
-# — Enables X-Ray tracing, SNS e-mail alerts, CW alarms,
-#   and a dashboard for your Lambda + DynamoDB stack.
+#
+# Enables X-Ray tracing, SNS e-mail alerts, CloudWatch alarms,
+# and a dashboard for your Lambda + DynamoDB stack.
 #########################################################
 
-# 1) IAM policy to let the Lambda role push X-Ray segments
+##################################
+# Data sources
+##################################
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+##################################
+# 1) Grant X-Ray permissions to Lambda execution role
+##################################
 resource "aws_iam_role_policy" "lambda_xray" {
   name = "${var.project_name}-lambda-xray-policy"
   role = aws_iam_role.lambda_exec.id
@@ -24,7 +34,11 @@ resource "aws_iam_role_policy" "lambda_xray" {
   })
 }
 
-# 2) Re-create the Lambda with active tracing (pulls everything else from existing function)
+##################################
+# 2) Enable Active tracing on your existing Lambda function
+#
+#    This recreates the function with the same config plus tracing.
+##################################
 resource "aws_lambda_function" "update_visitor_count_traced" {
   function_name    = aws_lambda_function.update_visitor_count.function_name
   role             = aws_lambda_function.update_visitor_count.role
@@ -37,19 +51,30 @@ resource "aws_lambda_function" "update_visitor_count_traced" {
     variables = aws_lambda_function.update_visitor_count.environment[0].variables
   }
 
-  tracing_config { mode = "Active" }
-
-  lifecycle {
-    ignore_changes = [ filename, source_code_hash ]
+  tracing_config {
+    mode = "Active"
   }
 
-  depends_on = [ aws_iam_role_policy.lambda_xray ]
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
+
+  depends_on = [
+    aws_iam_role_policy.lambda_xray
+  ]
 }
 
-# 3) SNS topic + email subscription
+##################################
+# 3) SNS Topic & Email Subscription
+##################################
 resource "aws_sns_topic" "alarms" {
   name = "${var.project_name}-alarms-topic"
-  tags = { Project = var.project_name }
+  tags = {
+    Project = var.project_name
+  }
 }
 
 resource "aws_sns_topic_subscription" "email_alert" {
@@ -58,10 +83,13 @@ resource "aws_sns_topic_subscription" "email_alert" {
   endpoint  = var.alert_email_address
 }
 
-# 4) CloudWatch alarms wired to that topic
+##################################
+# 4) CloudWatch Metric Alarms
+##################################
+
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${var.project_name}-lambda-errors"
-  alarm_description   = "Lambda errors ≥1 in 5m"
+  alarm_description   = "Lambda errors ≥ 1 in 5m"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
   dimensions          = { FunctionName = aws_lambda_function.update_visitor_count.function_name }
@@ -76,7 +104,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 
 resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   alarm_name          = "${var.project_name}-lambda-duration"
-  alarm_description   = "Lambda avg duration >1000ms in 5m"
+  alarm_description   = "Lambda avg duration > 1000ms in 5m"
   namespace           = "AWS/Lambda"
   metric_name         = "Duration"
   dimensions          = { FunctionName = aws_lambda_function.update_visitor_count.function_name }
@@ -91,7 +119,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
 
 resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
   alarm_name          = "${var.project_name}-dynamodb-throttles"
-  alarm_description   = "DynamoDB throttled reqs ≥1 in 5m"
+  alarm_description   = "DynamoDB throttled requests ≥ 1 in 5m"
   namespace           = "AWS/DynamoDB"
   metric_name         = "ThrottledRequests"
   dimensions          = { TableName = aws_dynamodb_table.visitor_count.name }
@@ -104,13 +132,20 @@ resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
   alarm_actions       = [ aws_sns_topic.alarms.arn ]
 }
 
-# 5) Dashboard
+##################################
+# 5) Operations Dashboard
+##################################
 resource "aws_cloudwatch_dashboard" "ops" {
   dashboard_name = "${var.project_name}-ops-dashboard"
+
   dashboard_body = jsonencode({
     widgets = [
       {
-        type       = "metric"; x = 0; y = 0; width = 12; height = 6
+        type       = "metric"
+        x          = 0
+        y          = 0
+        width      = 12
+        height     = 6
         properties = {
           title   = "Lambda Invocations & Errors"
           view    = "timeSeries"
@@ -122,7 +157,11 @@ resource "aws_cloudwatch_dashboard" "ops" {
         }
       },
       {
-        type       = "metric"; x = 0; y = 6; width = 12; height = 6
+        type       = "metric"
+        x          = 0
+        y          = 6
+        width      = 12
+        height     = 6
         properties = {
           title   = "Lambda Duration (ms)"
           view    = "timeSeries"
@@ -133,7 +172,11 @@ resource "aws_cloudwatch_dashboard" "ops" {
         }
       },
       {
-        type       = "metric"; x = 12; y = 0; width = 12; height = 6
+        type       = "metric"
+        x          = 12
+        y          = 0
+        width      = 12
+        height     = 6
         properties = {
           title   = "DynamoDB Throttles & Capacity"
           view    = "timeSeries"
