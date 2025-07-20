@@ -10,6 +10,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "ssl_min_protocol_version" {
+  description = "Minimum TLS protocol version for CloudFront distribution"
+  type        = string
+  default     = "TLSv1.2_2021"
+}
+
 variable "lambda_function_name" {
   description = "Name of the Lambda function"
   type        = string
