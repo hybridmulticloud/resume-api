@@ -11,8 +11,57 @@ on:
   workflow_dispatch:
 
 jobs:
+  terraform_imports:
+    name: Import Existing Infra
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    env:
+      AWS_REGION:             ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ROUTE53_ZONE_ID:        ${{ secrets.ROUTE53_ZONE_ID }}
+      FRONTEND_DOMAIN:        ${{ secrets.FRONTEND_DOMAIN }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Import existing S3 bucket
+        working-directory: infra
+        run: terraform import aws_s3_bucket.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import public access block
+        working-directory: infra
+        run: terraform import aws_s3_bucket_public_access_block.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import CloudFront OAC
+        working-directory: infra
+        run: terraform import aws_cloudfront_origin_access_control.frontend_oac "${{ secrets.CLOUDFRONT_OAC_ID }}"
+
+      - name: Import CloudFront distribution
+        working-directory: infra
+        run: terraform import aws_cloudfront_distribution.frontend "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+
+      - name: Import S3 bucket policy
+        working-directory: infra
+        run: terraform import aws_s3_bucket_policy.frontend "${{ secrets.FRONTEND_BUCKET_NAME }}"
+
+      - name: Import Route53 record
+        working-directory: infra
+        run: terraform import aws_route53_record.frontend_alias "${{ secrets.ROUTE53_ZONE_ID }}_${{ secrets.FRONTEND_DOMAIN }}_A"
+
   terraform_backend:
     name: Apply Terraform Infra
+    needs: [terraform_imports]
     runs-on: ubuntu-latest
 
     env:
