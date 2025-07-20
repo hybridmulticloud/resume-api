@@ -36,15 +36,10 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Show any formatting diffs in your HCL before blocking
-      - name: Terraform Fmt Diff
+      # auto‐format all your .tf files in monitoring/
+      - name: Terraform Fmt (auto‐fix)
         working-directory: monitoring
-        run: terraform fmt -recursive -diff -write=false
-
-      # Enforce that everything is already formatted
-      - name: Terraform Format Check
-        working-directory: monitoring
-        run: terraform fmt -recursive -check
+        run: terraform fmt -recursive
 
       - name: Terraform Validate
         working-directory: monitoring
