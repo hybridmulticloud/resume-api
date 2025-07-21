@@ -41,7 +41,7 @@ jobs:
 
       - name: Upload ZIP to S3
         run: |
-          aws s3 cp function.zip s3://$LAMBDA_BUCKET_NAME/function.zip
+          aws s3 cp function.zip s3://$lambda_bucket_name/function.zip
 
       - name: Compute SHA256 Hash
         id: zip
