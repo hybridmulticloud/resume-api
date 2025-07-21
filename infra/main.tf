@@ -1,6 +1,20 @@
 resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.project_name}-lambda-bucket"
   acl    = "private"
+
+  tags = {
+    Project     = var.project_name
+    Environment = "Production"
+    System      = "LambdaArtifacts"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "lambda_zip" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_iam_role" "lambda_exec" {
@@ -39,17 +53,14 @@ resource "aws_lambda_function" "update_visitor_count" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "lambda_function.lambda_handler"
   runtime          = var.lambda_runtime
-  filename         = "lambda_stub.zip"
-  source_code_hash = filebase64sha256("lambda_stub.zip")
+  s3_bucket        = aws_s3_bucket.lambda_bucket.id
+  s3_key           = var.lambda_s3_key
+  source_code_hash = var.lambda_zip_hash
 
   environment {
     variables = {
       TABLE_NAME = var.dynamodb_table_name
     }
-  }
-
-  lifecycle {
-    ignore_changes = [filename, source_code_hash]
   }
 
   depends_on = [
@@ -73,7 +84,7 @@ resource "null_resource" "seed_dynamodb" {
   triggers = { always_run = uuid() }
 
   provisioner "local-exec" {
-    command     = <<EOT
+    command = <<EOT
 ITEM=$(aws dynamodb get-item \
   --table-name ${var.dynamodb_table_name} \
   --key '{"id":{"S":"count"}}' \
