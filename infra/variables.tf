@@ -16,6 +16,17 @@ variable "ssl_min_protocol_version" {
   default     = "TLSv1.2_2021"
 }
 
+variable "lambda_s3_key" {
+  description = "S3 key for Lambda ZIP file"
+  type        = string
+  default     = "function.zip"
+}
+
+variable "lambda_zip_hash" {
+  description = "Base64 SHA256 hash of the Lambda ZIP for source_code_hash"
+  type        = string
+}
+
 variable "lambda_function_name" {
   description = "Name of the Lambda function"
   type        = string
