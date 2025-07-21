@@ -28,19 +28,17 @@ data "aws_lambda_function" "original" {
 }
 
 resource "aws_lambda_function" "update_visitor_count_traced" {
-  function_name    = "${local.fn_name}-traced"
-  role             = local.exec_role
-  handler          = data.aws_lambda_function.original.handler
-  runtime          = data.aws_lambda_function.original.runtime
-  filename         = data.aws_lambda_function.original.filename
-  source_code_hash = data.aws_lambda_function.original.source_code_hash
+  function_name = local.fn_name
+  role          = local.exec_role
+  handler       = data.aws_lambda_function.original.handler
+  runtime       = data.aws_lambda_function.original.runtime
 
   tracing_config {
     mode = "Active"
   }
 
   lifecycle {
-    ignore_changes = [filename, source_code_hash]
+    ignore_changes = [handler, runtime]
   }
 
   depends_on = [aws_iam_role_policy.lambda_xray]
