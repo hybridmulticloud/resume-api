@@ -1,3 +1,8 @@
+output "lambda_bucket_name" {
+  description = "Bucket where Lambda ZIP is stored"
+  value       = aws_s3_bucket.lambda_bucket.id
+}
+
 output "api_gateway_url" {
   description = "Full API Gateway invoke URL"
   value       = "${aws_apigatewayv2_api.lambda_api.api_endpoint}/UpdateVisitorCount"
