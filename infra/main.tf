@@ -99,13 +99,6 @@ resource "aws_apigatewayv2_api" "lambda_api" {
   }
 }
 
-
-resource "aws_apigatewayv2_route" "lambda_route" {
-  api_id    = aws_apigatewayv2_api.lambda_api.id
-  route_key = "POST /UpdateVisitorCount"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
-}
-
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.lambda_api.id
   name        = "$default"
