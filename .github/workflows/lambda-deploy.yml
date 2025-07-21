@@ -7,6 +7,7 @@ on:
     paths:
       - src/lambda_function.py
       - .github/workflows/lambda-deploy.yml
+  workflow_dispatch :  {}
 
 jobs:
   build-and-deploy:
