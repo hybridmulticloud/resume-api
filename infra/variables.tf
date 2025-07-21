@@ -16,6 +16,11 @@ variable "ssl_min_protocol_version" {
   default     = "TLSv1.2_2021"
 }
 
+variable "lambda_bucket_name" {
+  description = "S3 bucket where Lambda ZIP is stored"
+  type        = string
+}
+
 variable "lambda_s3_key" {
   description = "S3 key for Lambda ZIP file"
   type        = string
@@ -78,25 +83,5 @@ variable "cert_region" {
 
 variable "route53_zone_id" {
   description = "Route53 hosted zone ID for the frontend domain"
-  type        = string
-}
-
-variable "lambda_function_name" {
-  description = "Name of the Lambda function"
-  type        = string
-}
-
-variable "lambda_s3_key" {
-  description = "ZIP filename in S3"
-  type        = string
-}
-
-variable "lambda_bucket_name" {
-  description = "S3 bucket where Lambda ZIP is stored"
-  type        = string
-}
-
-variable "lambda_zip_hash" {
-  description = "Base64-encoded SHA256 hash for source_code_hash"
   type        = string
 }
