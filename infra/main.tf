@@ -48,29 +48,6 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   })
 }
 
-resource "aws_lambda_function" "update_visitor_count" {
-  function_name = var.lambda_function_name
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = var.lambda_runtime
-
-  # Only set these if a hash is provided — avoids error if ZIP is missing
-  s3_bucket        = var.lambda_zip_hash != "" ? aws_s3_bucket.lambda_bucket.id : null
-  s3_key           = var.lambda_zip_hash != "" ? var.lambda_s3_key : null
-  source_code_hash = var.lambda_zip_hash != "" ? var.lambda_zip_hash : null
-
-  environment {
-    variables = {
-      TABLE_NAME = var.dynamodb_table_name
-    }
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_basic_exec,
-    aws_iam_role_policy.lambda_dynamodb,
-  ]
-}
-
 resource "aws_dynamodb_table" "visitor_count" {
   name         = var.dynamodb_table_name
   billing_mode = "PAY_PER_REQUEST"
