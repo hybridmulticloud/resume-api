@@ -51,7 +51,7 @@ jobs:
         run: |
           HASH=$(openssl dgst -sha256 -binary function.zip | openssl base64)
           echo "ZIP_HASH=$HASH" >> $GITHUB_ENV
-          echo "::set-output name=zip_hash::$HASH"
+          echo "zip_hash=$HASH" >> $GITHUB_OUTPUT
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
