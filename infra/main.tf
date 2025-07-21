@@ -54,15 +54,10 @@ resource "aws_lambda_function" "update_visitor_count" {
   handler       = "lambda_function.lambda_handler"
   runtime       = var.lambda_runtime
 
-  # Conditionally set source code if values are passed from CI
-  dynamic "s3_bucket" {
-    for_each = var.lambda_zip_hash != "" ? [1] : []
-    content {
-      s3_bucket        = aws_s3_bucket.lambda_bucket.id
-      s3_key           = var.lambda_s3_key
-      source_code_hash = var.lambda_zip_hash
-    }
-  }
+  # Only set these if a hash is provided — avoids error if ZIP is missing
+  s3_bucket        = var.lambda_zip_hash != "" ? aws_s3_bucket.lambda_bucket.id : null
+  s3_key           = var.lambda_zip_hash != "" ? var.lambda_s3_key : null
+  source_code_hash = var.lambda_zip_hash != "" ? var.lambda_zip_hash : null
 
   environment {
     variables = {
