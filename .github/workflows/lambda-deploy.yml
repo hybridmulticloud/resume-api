@@ -39,6 +39,9 @@ jobs:
         working-directory: src
         run: zip -r ../function.zip lambda_function.py
 
+      - name: Export bucket name to shell
+        run: echo "lambda_bucket_name=$TF_VAR_lambda_bucket_name" >> $GITHUB_ENV
+
       - name: Upload ZIP to S3
         run: |
           aws s3 cp function.zip s3://$lambda_bucket_name/function.zip
