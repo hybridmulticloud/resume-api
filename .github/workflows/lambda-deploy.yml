@@ -21,6 +21,7 @@ jobs:
       TF_VAR_lambda_function_name: UpdateVisitorCount
       TF_VAR_dynamodb_table_name: VisitorCount
       TF_VAR_lambda_s3_key: function.zip
+      TF_VAR_lambda_bucket_name: resume-api-lambda-bucket
 
     steps:
       - name: Checkout code
