@@ -1,12 +1,16 @@
 resource "aws_s3_bucket" "lambda_bucket" {
   bucket = "${var.project_name}-lambda-bucket"
-  acl    = "private"
 
   tags = {
     Project     = var.project_name
     Environment = "Production"
     System      = "LambdaArtifacts"
   }
+}
+
+resource "aws_s3_bucket_acl" "lambda_acl" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_versioning" "lambda_zip" {
