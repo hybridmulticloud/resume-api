@@ -23,13 +23,17 @@ resource "aws_iam_role_policy" "lambda_xray" {
   })
 }
 
+data "aws_lambda_function" "original" {
+  function_name = local.fn_name
+}
+
 resource "aws_lambda_function" "update_visitor_count_traced" {
-  function_name    = local.fn_name
+  function_name    = "${local.fn_name}-traced"
   role             = local.exec_role
-  handler          = data.terraform_remote_state.backend.outputs.lambda_handler
-  runtime          = data.terraform_remote_state.backend.outputs.lambda_runtime
-  filename         = data.terraform_remote_state.backend.outputs.lambda_artifact_filename
-  source_code_hash = data.terraform_remote_state.backend.outputs.lambda_artifact_hash
+  handler          = data.aws_lambda_function.original.handler
+  runtime          = data.aws_lambda_function.original.runtime
+  filename         = data.aws_lambda_function.original.filename
+  source_code_hash = data.aws_lambda_function.original.source_code_hash
 
   tracing_config {
     mode = "Active"
