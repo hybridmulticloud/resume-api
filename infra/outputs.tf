@@ -3,6 +3,11 @@ output "lambda_bucket_name" {
   value       = aws_s3_bucket.lambda_bucket.id
 }
 
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = aws_lambda_function.update_visitor_count.function_name
+}
+
 output "api_gateway_url" {
   description = "Full API Gateway invoke URL"
   value       = "${aws_apigatewayv2_api.lambda_api.api_endpoint}/UpdateVisitorCount"
