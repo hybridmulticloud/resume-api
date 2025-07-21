@@ -49,13 +49,20 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 }
 
 resource "aws_lambda_function" "update_visitor_count" {
-  function_name    = var.lambda_function_name
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "lambda_function.lambda_handler"
-  runtime          = var.lambda_runtime
-  s3_bucket        = aws_s3_bucket.lambda_bucket.id
-  s3_key           = var.lambda_s3_key
-  source_code_hash = var.lambda_zip_hash
+  function_name = var.lambda_function_name
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "lambda_function.lambda_handler"
+  runtime       = var.lambda_runtime
+
+  # Conditionally set source code if values are passed from CI
+  dynamic "s3_bucket" {
+    for_each = var.lambda_zip_hash != "" ? [1] : []
+    content {
+      s3_bucket        = aws_s3_bucket.lambda_bucket.id
+      s3_key           = var.lambda_s3_key
+      source_code_hash = var.lambda_zip_hash
+    }
+  }
 
   environment {
     variables = {
