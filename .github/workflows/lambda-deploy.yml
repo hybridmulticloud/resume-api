@@ -1,37 +1,61 @@
-name: CI – Lambda Code Update
+name: Deploy Lambda Application
 
 on:
   push:
+    branches:
+      - main
     paths:
-      - "lambda_function.py"
-      - ".github/workflows/lambda-deploy.yml"
-    branches: [main]
+      - src/lambda_function.py
+      - .github/workflows/lambda-deploy.yml
 
 jobs:
-  deploy_lambda_code:
+  build-and-deploy:
+    name: Package and Deploy Lambda
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION:                ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      TF_VAR_lambda_function_name: UpdateVisitorCount
+      TF_VAR_dynamodb_table_name: VisitorCount
+      TF_VAR_lambda_s3_key: function.zip
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Zip Lambda function
-        run: zip function.zip lambda_function.py
-
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Deploy Lambda using AWS CLI
+      - name: Create ZIP
+        working-directory: src
+        run: zip -r ../function.zip lambda_function.py
+
+      - name: Upload ZIP to S3
         run: |
-          aws lambda update-function-code \
-            --function-name UpdateVisitorCount \
-            --zip-file fileb://function.zip
+          aws s3 cp function.zip s3://${{ secrets.LAMBDA_BUCKET_NAME }}/function.zip
+
+      - name: Compute SHA256 Hash
+        id: zip
+        run: |
+          HASH=$(openssl dgst -sha256 -binary function.zip | openssl base64)
+          echo "ZIP_HASH=$HASH" >> $GITHUB_ENV
+          echo "::set-output name=zip_hash::$HASH"
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false \
+            -var="lambda_zip_hash=${{ steps.zip.outputs.zip_hash }}"
