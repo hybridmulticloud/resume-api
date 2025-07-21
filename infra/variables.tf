@@ -25,6 +25,7 @@ variable "lambda_s3_key" {
 variable "lambda_zip_hash" {
   description = "Base64 SHA256 hash of the Lambda ZIP for source_code_hash"
   type        = string
+  default     = "placeholderhash=="
 }
 
 variable "lambda_function_name" {
