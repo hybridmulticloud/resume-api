@@ -1,10 +1,14 @@
 resource "aws_s3_bucket" "frontend" {
   bucket = var.frontend_bucket_name
-  acl    = "private"
 
   tags = {
     Project = var.project_name
   }
+}
+
+resource "aws_s3_bucket_acl" "frontend_acl" {
+  bucket = aws_s3_bucket.frontend.id
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
