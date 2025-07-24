@@ -1,101 +1,131 @@
-locals {
-  fn_name   = data.terraform_remote_state.backend.outputs.lambda_function_name
-  exec_role = data.terraform_remote_state.backend.outputs.lambda_exec_role_name
-  tbl_name  = data.terraform_remote_state.backend.outputs.dynamodb_table_name
+resource "aws_sns_topic" "alerts" {
+  name = "${var.rest_api_id}-alerts"
 }
 
-resource "aws_iam_role_policy" "lambda_xray" {
-  name = "${var.project_name}-lambda-xray-policy"
-  role = local.exec_role
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "xray:BatchGetTraces",
-        "xray:GetServiceGraph",
-        "xray:PutTraceSegments",
-        "xray:PutTelemetryRecords",
-      ]
-      Resource = ["*"]
-    }]
-  })
-}
-
-data "aws_lambda_function" "original" {
-  function_name = local.fn_name
-}
-
-resource "aws_lambda_function" "update_visitor_count_traced" {
-  function_name = local.fn_name
-  role          = local.exec_role
-  handler       = data.aws_lambda_function.original.handler
-  runtime       = data.aws_lambda_function.original.runtime
-
-  tracing_config {
-    mode = "Active"
-  }
-
-  lifecycle {
-    ignore_changes = [handler, runtime]
-  }
-
-  depends_on = [aws_iam_role_policy.lambda_xray]
-}
-
-resource "aws_sns_topic" "alarms" {
-  name = "${var.project_name}-alarms-topic"
-  tags = { Project = var.project_name }
-}
-
-resource "aws_sns_topic_subscription" "email_alert" {
-  topic_arn = aws_sns_topic.alarms.arn
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
-  endpoint  = var.alert_email_address
+  endpoint  = var.alert_email
 }
 
+# API Gateway 5XX alarm
+resource "aws_cloudwatch_metric_alarm" "api_5xx" {
+  alarm_name          = "${var.rest_api_id}-api-5xx"
+  alarm_description   = "API Gateway 5XX errors"
+  namespace           = "AWS/ApiGateway"
+  metric_name         = "5XXError"
+  dimensions = {
+    ApiId = var.rest_api_id
+    Stage = var.api_stage_name
+  }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+# Lambda Errors alarm
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  alarm_name          = "${var.project_name}-lambda-errors"
+  alarm_name          = "${var.lambda_function_name}-errors"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
-  dimensions          = { FunctionName = local.fn_name }
+  dimensions = {
+    FunctionName = var.lambda_function_name
+  }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  alarm_actions       = [aws_sns_topic.alarms.arn]
+  alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
-  alarm_name          = "${var.project_name}-lambda-duration"
-  namespace           = "AWS/Lambda"
-  metric_name         = "Duration"
-  dimensions          = { FunctionName = local.fn_name }
-  statistic           = "Average"
-  period              = 300
-  evaluation_periods  = 1
-  threshold           = 1000
-  comparison_operator = "GreaterThanThreshold"
-  alarm_actions       = [aws_sns_topic.alarms.arn]
+# Synthetics canary: homepage check
+resource "aws_synthetics_canary" "homepage" {
+  name                   = "${var.rest_api_id}-homepage-canary"
+  artifact_s3_location   = "s3://${var.canary_artifact_bucket}/homepage/"
+  execution_role_arn     = var.canary_execution_role_arn
+  runtime_version        = "syn-nodejs-4.0"
+
+  schedule {
+    expression = "rate(5 minutes)"
+  }
+
+  start_canary_after_creation = true
+
+  code {
+    handler = "index.handler"
+    script  = <<-EOF
+      const synthetics = require('Synthetics');
+      const page = await synthetics.getPage();
+      const res = await page.goto("https://${aws_cloudfront_distribution.main.domain_name}", { waitUntil: 'networkidle0' });
+      if (res.status() !== 200) throw new Error(`Status ${res.status()}`);
+    EOF
+  }
 }
 
-resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
-  alarm_name          = "${var.project_name}-dynamodb-throttles"
-  namespace           = "AWS/DynamoDB"
-  metric_name         = "ThrottledRequests"
-  dimensions          = { TableName = local.tbl_name }
+# Synthetics canary: visitor-counter API check
+resource "aws_synthetics_canary" "api" {
+  name                 = "${var.rest_api_id}-api-canary"
+  artifact_s3_location = "s3://${var.canary_artifact_bucket}/api/"
+  execution_role_arn   = var.canary_execution_role_arn
+  runtime_version      = "syn-nodejs-4.0"
+
+  schedule {
+    expression = "rate(5 minutes)"
+  }
+
+  start_canary_after_creation = true
+
+  code {
+    handler = "index.handler"
+    script  = <<-EOF
+      const synthetics = require('Synthetics');
+      const log = require('SyntheticsLogger');
+      const url = "https://${aws_api_gateway_rest_api.main.execution_arn}/${var.api_stage_name}/UpdateVisitorCount";
+      const res = await synthetics.executeHttpStep('post-count', {
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (res.statusCode !== 200) throw new Error(`Status ${res.statusCode}`);
+    EOF
+  }
+}
+
+# Canary failure alarms
+resource "aws_cloudwatch_metric_alarm" "homepage_canary_fail" {
+  alarm_name          = "${var.rest_api_id}-homepage-canary-fail"
+  namespace           = "CloudWatchSynthetics"
+  metric_name         = "Failed"
+  dimensions = { CanaryName = aws_synthetics_canary.homepage.name }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  alarm_actions       = [aws_sns_topic.alarms.arn]
+  alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-resource "aws_cloudwatch_dashboard" "ops" {
-  dashboard_name = "${var.project_name}-ops-dashboard"
+resource "aws_cloudwatch_metric_alarm" "api_canary_fail" {
+  alarm_name          = "${var.rest_api_id}-api-canary-fail"
+  namespace           = "CloudWatchSynthetics"
+  metric_name         = "Failed"
+  dimensions = { CanaryName = aws_synthetics_canary.api.name }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+# Dashboard
+resource "aws_cloudwatch_dashboard" "main" {
+  dashboard_name = "${var.rest_api_id}-dashboard"
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -105,28 +135,11 @@ resource "aws_cloudwatch_dashboard" "ops" {
         width      = 12
         height     = 6
         properties = {
-          title   = "Lambda Invocations & Errors"
-          view    = "timeSeries"
-          region  = var.aws_region
           metrics = [
-            ["AWS/Lambda", "Invocations", "FunctionName", local.fn_name],
-            [".", "Errors", "FunctionName", local.fn_name, {"stat" = "Sum"}],
+            [ "AWS/ApiGateway", "5XXError", "ApiId", var.rest_api_id, "Stage", var.api_stage_name ]
           ]
-        }
-      },
-      {
-        type       = "metric"
-        x          = 0
-        y          = 6
-        width      = 12
-        height     = 6
-        properties = {
-          title   = "Lambda Duration (ms)"
-          view    = "timeSeries"
-          region  = var.aws_region
-          metrics = [
-            ["AWS/Lambda", "Duration", "FunctionName", local.fn_name, {"stat" = "Average"}],
-          ]
+          region = var.aws_region
+          stat   = "Sum"
         }
       },
       {
@@ -136,14 +149,11 @@ resource "aws_cloudwatch_dashboard" "ops" {
         width      = 12
         height     = 6
         properties = {
-          title   = "DynamoDB Throttles & Capacity"
-          view    = "timeSeries"
-          region  = var.aws_region
           metrics = [
-            ["AWS/DynamoDB", "ThrottledRequests", "TableName", local.tbl_name],
-            [".", "ConsumedReadCapacityUnits", "TableName", local.tbl_name, {"stat" = "Sum"}],
-            [".", "ConsumedWriteCapacityUnits", "TableName", local.tbl_name, {"stat" = "Sum"}],
+            [ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]
           ]
+          region = var.aws_region
+          stat   = "Sum"
         }
       }
     ]
