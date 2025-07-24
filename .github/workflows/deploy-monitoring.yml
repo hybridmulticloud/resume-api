@@ -1,62 +1,31 @@
-name: Deploy Monitoring Infrastructure
+name: Deploy Monitoring & Canaries
 
 on:
   push:
-    branches:
-      - main
     paths:
-      - monitoring/**/*.tf
+      - monitoring/**
       - .github/workflows/deploy-monitoring.yml
-  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
 
 jobs:
   deploy-monitoring:
     runs-on: ubuntu-latest
 
-    env:
-      AWS_REGION:                 ${{ secrets.AWS_REGION }}
-      AWS_ACCESS_KEY_ID:          ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY:      ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      TF_VAR_alert_email_address: ${{ secrets.ALERT_EMAIL_ADDRESS }}
-      TF_TOKEN_app_terraform_io:  ${{ secrets.TF_API_TOKEN }}
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
-
-      # 1) Init first so providers & backends are installed
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init -input=false
-
-      # 2) Auto-format your .tf files
-      - name: Terraform Fmt
-        working-directory: monitoring
-        run: terraform fmt -recursive
-
-      # 3) Now validate—providers are available
-      - name: Terraform Validate
-        working-directory: monitoring
-        run: terraform validate
-
-      # 4) Plan & Apply
-      - name: Terraform Plan
-        working-directory: monitoring
-        run: terraform plan -out=tfplan -input=false
+        run: terraform init
 
       - name: Terraform Apply
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         working-directory: monitoring
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve
