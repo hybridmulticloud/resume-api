@@ -1,16 +1,35 @@
 variable "aws_region" {
-  description = "AWS region for monitoring resources"
+  description = "AWS region"
   type        = string
   default     = "us-east-1"
 }
 
-variable "project_name" {
-  description = "Base name for SNS topic & dashboard"
+variable "rest_api_id" {
+  description = "API Gateway REST API ID"
   type        = string
-  default     = "resume-api"
 }
 
-variable "alert_email_address" {
-  description = "Recipient e-mail for SNS alarm notifications"
+variable "api_stage_name" {
+  description = "API Gateway stage name"
+  type        = string
+}
+
+variable "lambda_function_name" {
+  description = "Lambda function name"
+  type        = string
+}
+
+variable "canary_artifact_bucket" {
+  description = "S3 bucket for canary artifacts"
+  type        = string
+}
+
+variable "canary_execution_role_arn" {
+  description = "IAM role ARN for canaries"
+  type        = string
+}
+
+variable "alert_email" {
+  description = "Email address to subscribe to alarm notifications"
   type        = string
 }
