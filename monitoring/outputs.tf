@@ -1,8 +1,15 @@
-output "alarm_arns" {
-  description = "List of created CloudWatch alarm ARNs"
-  value       = [
-    aws_cloudwatch_metric_alarm.lambda_errors.arn,
-    aws_cloudwatch_metric_alarm.lambda_duration.arn,
-    aws_cloudwatch_metric_alarm.dynamodb_throttles.arn,
-  ]
+output "sns_topic_arn" {
+  value = aws_sns_topic.alerts.arn
+}
+
+output "homepage_canary_name" {
+  value = aws_synthetics_canary.homepage.name
+}
+
+output "api_canary_name" {
+  value = aws_synthetics_canary.api.name
+}
+
+output "dashboard_name" {
+  value = aws_cloudwatch_dashboard.main.dashboard_name
 }
