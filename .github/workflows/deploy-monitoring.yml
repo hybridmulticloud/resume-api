@@ -1,46 +1,107 @@
-name: Deploy Monitoring
-
-on:
-  push:
-    paths:
-      - 'monitoring/**'
-  workflow_dispatch:
-
-env:
-  AWS_REGION:                ${{ secrets.AWS_REGION }}
-  AWS_DEFAULT_REGION:        ${{ secrets.AWS_REGION }}
-  TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-  TF_VAR_project_name:       ${{ secrets.PROJECT_NAME }}
-  TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
-  TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
-
-jobs:
-  monitoring:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-region:            ${{ env.AWS_REGION }}
-          aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Setup Terraform CLI
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: "1.5.7"
-
-      - name: Terraform Init
-        working-directory: monitoring
-        run: terraform init -upgrade
-
-      - name: Terraform Validate
-        working-directory: monitoring
-        run: terraform validate
-
-      - name: Terraform Apply
-        working-directory: monitoring
-        run: terraform apply -auto-approve -input=false
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3CanaryBucketManagement",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:ListAllMyBuckets",
+        "s3:ListBucket",
+        "s3:ListBucketVersions",
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketAcl",
+        "s3:PutObject",
+        "s3:PutBucketVersioning",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutBucketPolicy"
+      ],
+      "Resource": [
+        "arn:aws:s3:::canary-artifacts-*",
+        "arn:aws:s3:::canary-artifacts-*/*"
+      ]
+    },
+    {
+      "Sid": "SNSAlerts",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:GetTopicAttributes",
+        "sns:ListTopics",
+        "sns:Publish",
+        "sns:Subscribe",
+        "sns:SetTopicAttributes",
+        "sns:ListTagsForResource"
+      ],
+      "Resource": [
+        "arn:aws:sns:*:*:*-alerts",
+        "arn:aws:sns:*:*:*-alerts*"
+      ]
+    },
+    {
+      "Sid": "CloudWatchDashboardsAndAlarms",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutDashboard",
+        "cloudwatch:DeleteDashboards",
+        "cloudwatch:GetDashboard",
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:DeleteAlarms"
+      ],
+      "Resource": [
+        "arn:aws:cloudwatch:*:*:dashboard/*",
+        "arn:aws:cloudwatch:*:*:alarm/*"
+      ]
+    },
+    {
+      "Sid": "SyntheticsCanaries",
+      "Effect": "Allow",
+      "Action": [
+        "synthetics:CreateCanary",
+        "synthetics:StartCanary",
+        "synthetics:StopCanary",
+        "synthetics:DeleteCanary",
+        "synthetics:GetCanary",
+        "synthetics:DescribeCanaries",
+        "synthetics:GetCanaryRuns"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Sid": "IAMForCanaries",
+      "Effect": "Allow",
+      "Action": [
+        "iam:ListRolePolicies",
+        "iam:GetRole",
+        "iam:ListAttachedRolePolicies",
+        "iam:GetRolePolicy",
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/resume-api-canary*",
+        "arn:aws:iam::*:role/resume-monitoring-canary-role*"
+      ]
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:*",
+        "arn:aws:logs:*:*:log-stream:*"
+      ]
+    }
+  ]
+}
