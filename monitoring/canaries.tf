@@ -4,13 +4,15 @@ locals {
 }
 
 data "archive_file" "homepage_zip" {
-  type       = "zip"
-  source_dir = local.homepage_dir
+  type        = "zip"
+  source_dir  = local.homepage_dir
+  output_path = "${path.module}/homepage.zip"
 }
 
 data "archive_file" "api_zip" {
-  type       = "zip"
-  source_dir = local.api_dir
+  type        = "zip"
+  source_dir  = local.api_dir
+  output_path = "${path.module}/api.zip"
 }
 
 resource "aws_synthetics_canary" "homepage" {
