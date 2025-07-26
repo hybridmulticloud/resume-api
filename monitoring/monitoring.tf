@@ -55,14 +55,17 @@ resource "aws_synthetics_canary" "homepage" {
     timeout_in_seconds = 60
   }
 
-  script = <<-EOT
-    const synthetics = require('Synthetics');
-    const page = await synthetics.getPage();
-    const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
-    if (res.status() !== 200) {
-      throw new Error(`Homepage returned status $${res.status()}`);
-    }
-  EOT
+  code {
+    handler = "index.handler"
+    script  = <<-EOT
+      const synthetics = require('Synthetics');
+      const page = await synthetics.getPage();
+      const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
+      if (res.status() !== 200) {
+        throw new Error(`Homepage returned status $${res.status()}`);
+      }
+    EOT
+  }
 
   tags = {
     Name = "Homepage Canary"
@@ -85,20 +88,23 @@ resource "aws_synthetics_canary" "api" {
     timeout_in_seconds = 60
   }
 
-  script = <<-EOT
-    const synthetics = require('Synthetics');
-    const log = require('SyntheticsLogger');
-    const url = "https://${var.rest_api_id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_stage_name}/UpdateVisitorCount";
-    const res = await synthetics.executeHttpStep('post-count', {
-      url,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    if (res.statusCode !== 200) {
-      throw new Error(`API returned status $${res.statusCode}`);
-    }
-  EOT
+  code {
+    handler = "index.handler"
+    script  = <<-EOT
+      const synthetics = require('Synthetics');
+      const log = require('SyntheticsLogger');
+      const url = "https://${var.rest_api_id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_stage_name}/UpdateVisitorCount";
+      const res = await synthetics.executeHttpStep('post-count', {
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (res.statusCode !== 200) {
+        throw new Error(`API returned status $${res.statusCode}`);
+      }
+    EOT
+  }
 
   tags = {
     Name = "API Canary"
