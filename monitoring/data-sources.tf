@@ -1,7 +1,3 @@
-terraform {
-  required_version = ">= 1.2"
-}
-
 data "terraform_remote_state" "infra" {
   backend = "remote"
   config = {
