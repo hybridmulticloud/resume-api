@@ -1,14 +1,14 @@
 output "api_gateway_id" {
-  value       = local.api_id
-  description = "Extracted API Gateway ID"
-}
-
-output "sns_topic_arn" {
-  value       = aws_sns_topic.alerts.arn
-  description = "SNS topic ARN for alerts"
+  description = "ID of the monitored API Gateway"
+  value       = local.api_gateway_id
 }
 
 output "dashboard_name" {
+  description = "CloudWatch Dashboard name"
   value       = aws_cloudwatch_dashboard.main.dashboard_name
-  description = "Name of the CloudWatch dashboard"
+}
+
+output "sns_topic_arn" {
+  description = "SNS topic for alerts"
+  value       = aws_sns_topic.alerts.arn
 }
