@@ -19,6 +19,7 @@ variable "ssl_min_protocol_version" {
 variable "lambda_bucket_name" {
   description = "S3 bucket where Lambda ZIP is stored"
   type        = string
+  default     = "${var.project_name}-lambda-bucket"
 }
 
 variable "lambda_s3_key" {
