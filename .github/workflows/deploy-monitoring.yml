@@ -1,4 +1,3 @@
-# .github/workflows/deploy-monitoring.yml
 name: Deploy Monitoring & Canaries
 
 on:
