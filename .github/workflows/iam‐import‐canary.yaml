@@ -49,14 +49,26 @@ jobs:
         working-directory: monitoring
         run: terraform validate
 
-      - name: Import existing IAM Role
+      - name: Import IAM Role
         working-directory: monitoring
         run: terraform import aws_iam_role.canary_role resume-monitoring-canary-role
 
-      # — add other imports here —
-      # - name: Import S3 bucket
+      - name: Import S3 Bucket
+        working-directory: monitoring
+        run: terraform import aws_s3_bucket.artifacts canary-artifacts-b143dc4d
+
+      - name: Import S3 SSE Configuration
+        working-directory: monitoring
+        run: terraform import aws_s3_bucket_server_side_encryption_configuration.artifacts_sse canary-artifacts-b143dc4d
+
+      - name: Import S3 Versioning
+        working-directory: monitoring
+        run: terraform import aws_s3_bucket_versioning.canary_artifacts_versioning canary-artifacts-b143dc4d
+
+      # — Add any other imports here — 
+      # - name: Import IAM Policy Attachment
       #   working-directory: monitoring
-      #   run: terraform import aws_s3_bucket.website_bucket my-existing-bucket
+      #   run: terraform import aws_iam_role_policy_attachment.canary_attach <attachment-id>
 
       - name: Terraform Plan (post-import)
         working-directory: monitoring
