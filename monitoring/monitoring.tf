@@ -14,9 +14,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  lifecycle { prevent_destroy = true }
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -31,9 +29,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  lifecycle { prevent_destroy = true }
 }
 
 resource "aws_cloudwatch_dashboard" "main" {
@@ -46,10 +42,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         y          = 0
         width      = 12
         height     = 6
-
         properties = {
           metrics = [
-            ["AWS/ApiGateway","5XXError","ApiId", local.api_gateway_id],
+            ["AWS/ApiGateway","5XXError","ApiId",local.api_gateway_id]
           ]
           stat   = "Sum"
           period = 300
@@ -63,10 +58,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         y          = 0
         width      = 12
         height     = 6
-
         properties = {
           metrics = [
-            ["AWS/Lambda","Errors","FunctionName", local.lambda_function_name],
+            ["AWS/Lambda","Errors","FunctionName",local.lambda_function_name]
           ]
           stat   = "Sum"
           period = 300
@@ -77,7 +71,5 @@ resource "aws_cloudwatch_dashboard" "main" {
     ]
   })
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  lifecycle { prevent_destroy = true }
 }
