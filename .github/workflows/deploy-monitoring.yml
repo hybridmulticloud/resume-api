@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION:                ${{ secrets.AWS_REGION }}
-  AWS_DEFAULT_REGION:        ${{ secrets.AWS_REGION }}
+  AWS_REGION:         ${{ secrets.AWS_REGION }}
+  AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
   monitoring:
@@ -35,13 +35,13 @@ jobs:
 
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init
+        run: terraform init -upgrade
 
-      - name: Import existing resources
+      - name: Import existing Synthetics role
         working-directory: monitoring
         run: |
-          terraform import aws_iam_role.canary_role   ${api_canary_name}   || true
-          terraform import aws_s3_bucket.canary_artifacts   canary-artifacts-${random_id.suffix.hex}   || true
+          # Prevent re-creation of the existing role
+          terraform import aws_iam_role.canary_role resume-api-canary || true
 
       - name: Terraform Validate
         working-directory: monitoring
