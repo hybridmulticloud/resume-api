@@ -1,14 +1,12 @@
-# SNS topic for alarm notifications
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-alerts"
 }
 
-# CloudWatch Alarm: API Gateway 5XX Errors
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name          = "${var.project_name}-api-5xx"
   namespace           = "AWS/ApiGateway"
   metric_name         = "5XXError"
-  dimensions          = { ApiId = local.api_id }
+  dimensions          = { ApiId = local.api_gateway_id }
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
@@ -21,12 +19,11 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   }
 }
 
-# CloudWatch Alarm: Lambda Function Errors
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  alarm_name          = "${var.lambda_function_name}-errors"
+  alarm_name          = "${local.lambda_function_name}-errors"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
-  dimensions          = { FunctionName = var.lambda_function_name }
+  dimensions          = { FunctionName = local.lambda_function_name }
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
@@ -39,20 +36,16 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   }
 }
 
-# CloudWatch Dashboard combining both metrics
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-dashboard"
   dashboard_body = jsonencode({
     widgets = [
       {
-        type       = "metric"
-        x          = 0
-        y          = 0
-        width      = 12
-        height     = 6
+        type = "metric"
+        x    = 0; y = 0; width = 12; height = 6
         properties = {
           metrics = [
-            ["AWS/ApiGateway", "5XXError", "ApiId", local.api_id],
+            ["AWS/ApiGateway","5XXError","ApiId", local.api_gateway_id],
           ]
           stat   = "Sum"
           period = 300
@@ -61,14 +54,11 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric"
-        x          = 12
-        y          = 0
-        width      = 12
-        height     = 6
+        type = "metric"
+        x    = 12; y = 0; width = 12; height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name],
+            ["AWS/Lambda","Errors","FunctionName", local.lambda_function_name],
           ]
           stat   = "Sum"
           period = 300
