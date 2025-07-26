@@ -1,36 +1,41 @@
-name: One-Time Import Canary Role
+name: Terraform Monitoring
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
+env:
+  TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+  TF_VAR_aws_region:   ${{ secrets.AWS_REGION }}
+
 jobs:
-  import_canary_role:
-    name: Import existing IAM Role
+  monitoring:
     runs-on: ubuntu-latest
 
-    # All "run" steps below will execute in the ./monitoring folder
-    defaults:
-      run:
-        working-directory: ./monitoring
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Set up Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            eu-west-2
+          terraform_version: "1.5.7"
 
       - name: Terraform Init
+        working-directory: monitoring
         run: terraform init -input=false
 
-      - name: Import Canary Role
-        run: terraform import aws_iam_role.canary_role resume-monitoring-canary-role
+      - name: Terraform Validate
+        working-directory: monitoring
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: monitoring
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: monitoring
+        run: terraform apply -input=false -auto-approve tfplan
