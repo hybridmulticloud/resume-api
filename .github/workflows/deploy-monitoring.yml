@@ -24,9 +24,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region: "${{ secrets.AWS_REGION }}"
-          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID }}"
-          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terraform Init
         working-directory: monitoring
@@ -38,13 +38,13 @@ jobs:
 
       - name: Terraform Apply
         working-directory: monitoring
-        run: >
-          terraform apply -auto-approve
-          -var="rest_api_id=${{ secrets.REST_API_ID }}"
-          -var="api_stage_name=${{ secrets.API_STAGE_NAME }}"
-          -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}"
-          -var="alert_email=${{ secrets.ALERT_EMAIL }}"
-          -var="aws_region=${{ secrets.AWS_REGION }}"
-          -var="canary_artifact_bucket=${{ secrets.CANARY_ARTIFACT_BUCKET }}"
-          -var="canary_execution_role_arn=${{ secrets.CANARY_EXECUTION_ROLE_ARN }}"
-          -var="cloudfront_domain_name=${{ secrets.CLOUDFRONT_DOMAIN_NAME }}"
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_region=${{ secrets.AWS_REGION }}" \
+            -var="rest_api_id=${{ secrets.REST_API_ID }}" \
+            -var="api_stage_name=${{ secrets.API_STAGE_NAME }}" \
+            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+            -var="canary_artifact_bucket=${{ secrets.CANARY_ARTIFACT_BUCKET }}" \
+            -var="canary_execution_role_arn=${{ secrets.CANARY_EXECUTION_ROLE_ARN }}" \
+            -var="cloudfront_domain_name=${{ secrets.CLOUDFRONT_DOMAIN_NAME }}"
