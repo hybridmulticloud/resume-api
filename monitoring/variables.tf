@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Base name for all resources"
+  description = "Base name for all resources (matches infra default)"
   type        = string
   default     = "resume-api"
 }
@@ -8,6 +8,12 @@ variable "aws_region" {
   description = "AWS region to deploy resources"
   type        = string
   default     = "us-east-1"
+}
+
+variable "lambda_function_name" {
+  description = "Name of the existing Lambda function (infra default)"
+  type        = string
+  default     = "UpdateVisitorCount"
 }
 
 variable "alert_email" {
@@ -27,13 +33,23 @@ variable "schedule_expression" {
 }
 
 variable "homepage_canary_name" {
-  description = "Logical name for the homepage Canary"
+  description = "Name for the homepage Canary (lowercase/hyphens/underscores)"
   type        = string
   default     = "resume-homepage-canary"
+
+  validation {
+    condition     = can(regex("^[a-z0-9_-]+$", var.homepage_canary_name))
+    error_message = "homepage_canary_name must be lowercase alphanumeric, hyphens or underscores only"
+  }
 }
 
 variable "api_canary_name" {
-  description = "Logical name for the API Canary"
+  description = "Name for the API Canary (lowercase/hyphens/underscores)"
   type        = string
   default     = "resume-api-canary"
+
+  validation {
+    condition     = can(regex("^[a-z0-9_-]+$", var.api_canary_name))
+    error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
+  }
 }
