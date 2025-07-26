@@ -3,9 +3,12 @@ terraform {
 }
 
 data "terraform_remote_state" "infra" {
-  backend = "local"
+  backend = "remote"
   config = {
-    path = "../infra/terraform.tfstate"
+    organization = "hybridmulticloud"
+    workspaces = {
+      name = "resume-api-backend"
+    }
   }
 }
 
@@ -17,9 +20,9 @@ locals {
   lambda_exec_role_name     = data.terraform_remote_state.infra.outputs.lambda_exec_role_name
 
   # API Gateway
-  api_endpoint   = data.terraform_remote_state.infra.outputs.api_endpoint
+  api_endpoint    = data.terraform_remote_state.infra.outputs.api_endpoint
   api_gateway_url = data.terraform_remote_state.infra.outputs.api_gateway_url
-  api_gateway_id = split(".", replace(local.api_gateway_url, "https://", ""))[0]
+  api_gateway_id  = split(".", replace(local.api_gateway_url, "https://", ""))[0]
 
   # DynamoDB & Frontend bucket
   dynamodb_table_name  = data.terraform_remote_state.infra.outputs.dynamodb_table_name
