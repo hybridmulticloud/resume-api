@@ -9,11 +9,17 @@ on:
   workflow_dispatch:
 
 env:
+  # Alert email for SNS subscriptions
   TF_VAR_alert_email:         ${{ secrets.ALERT_EMAIL_ADDRESS }}
-  TF_VAR_backend_state_bucket: ${{ secrets.BACKEND_STATE_BUCKET }}
-  TF_VAR_backend_state_key:    ${{ secrets.BACKEND_STATE_KEY }}
-  TF_VAR_backend_lock_table:   ${{ secrets.BACKEND_LOCK_TABLE }}
-  TF_VAR_aws_region:           us-east-1
+
+  # AWS credentials & region
+  AWS_ACCESS_KEY_ID:          ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY:      ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION:                 ${{ secrets.AWS_REGION }}
+  AWS_DEFAULT_REGION:         ${{ secrets.AWS_REGION }}
+
+  # Terraform Cloud API token for remote‐state access
+  TF_TOKEN_app_terraform_io:  ${{ secrets.TF_API_TOKEN }}
 
 jobs:
   monitoring:
@@ -25,9 +31,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region:            ${{ env.TF_VAR_aws_region }}
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
 
       - name: Clean Terraform cache
         run: |
