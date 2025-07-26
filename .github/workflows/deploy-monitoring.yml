@@ -30,7 +30,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init
+        run: terraform init -upgrade
 
       - name: Terraform Validate
         working-directory: monitoring
