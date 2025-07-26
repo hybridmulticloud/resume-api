@@ -57,6 +57,9 @@ jobs:
           name: infra-outputs
           path: infra/*.txt
 
+      - name: Pull remote state
+        run: terraform state pull > infra/terraform.tfstate
+
       - name: Upload infra state file
         uses: actions/upload-artifact@v4
         with:
