@@ -13,3 +13,8 @@ output "api_canary_name" {
 output "dashboard_name" {
   value = aws_cloudwatch_dashboard.main.dashboard_name
 }
+
+output "api_gateway_id" {
+  description = "The ID of the API Gateway identified by name"
+  value       = data.aws_apigatewayv2_api.main.id
+}
