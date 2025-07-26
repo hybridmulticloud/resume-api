@@ -42,6 +42,7 @@ jobs:
         working-directory: monitoring
         run: |
           terraform validate
+
           terraform plan -out=tfplan \
             -var="aws_region=${{ secrets.AWS_REGION }}" \
             -var="rest_api_name=${{ secrets.REST_API_NAME }}" \
@@ -52,8 +53,8 @@ jobs:
             -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
             -var="canary_execution_role_arn=${{ secrets.CANARY_EXECUTION_ROLE_ARN }}" \
             -var="schedule_expression=${{ secrets.SCHEDULE_EXPRESSION }}" \
-            -var="homepage_canary_name=HomepageCanary" \
-            -var="api_canary_name=ApiCanary"
+            -var="homepage_canary_name=${{ secrets.HOMEPAGE_CANARY_NAME }}" \
+            -var="api_canary_name=${{ secrets.API_CANARY_NAME }}"
 
       - name: Terraform Apply
         if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
