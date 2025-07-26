@@ -10,19 +10,15 @@ env:
   AWS_REGION:                ${{ secrets.AWS_REGION }}
   AWS_DEFAULT_REGION:        ${{ secrets.AWS_REGION }}
   TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-  TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_project_name:       ${{ secrets.PROJECT_NAME }}
+  TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
 
 jobs:
   monitoring:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Download infra state artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: infra-state
-          path: infra
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -31,19 +27,14 @@ jobs:
           aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
 
-      - name: Clean Terraform cache
-        run: |
-          cd monitoring
-          rm -rf .terraform .terraform.lock.hcl
-
-      - name: Setup Terraform
+      - name: Setup Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init -backend=false -upgrade
+        run: terraform init -upgrade
 
       - name: Terraform Validate
         working-directory: monitoring
