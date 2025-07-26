@@ -24,6 +24,7 @@ resource "aws_iam_role" "canary_role" {
 
   lifecycle {
     prevent_destroy = true
+    create_before_destroy = false
     ignore_changes  = [assume_role_policy]
   }
 }
