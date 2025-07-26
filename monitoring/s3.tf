@@ -11,15 +11,17 @@ resource "aws_s3_bucket" "canary_artifacts" {
     enabled = true
   }
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
   tags = {
     Name = "CanaryArtifacts"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts_sse" {
+  bucket = aws_s3_bucket.canary_artifacts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
