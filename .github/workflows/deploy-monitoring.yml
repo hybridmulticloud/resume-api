@@ -1,3 +1,5 @@
+# backend/monitoring/.github/workflows/deploy-monitoring.yml
+
 name: Deploy Monitoring
 
 on:
@@ -6,6 +8,7 @@ on:
       - 'monitoring/**'
   schedule:
     - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   monitoring:
@@ -20,7 +23,7 @@ jobs:
           cd monitoring
           rm -rf .terraform .terraform.lock.hcl
 
-      - name: Setup Terraform
+      - name: Set up Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
@@ -54,6 +57,6 @@ jobs:
             -var="api_canary_name=ApiCanary"
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
         working-directory: monitoring
         run: terraform apply -auto-approve tfplan
