@@ -32,22 +32,6 @@ variable "schedule_expression" {
   default     = "rate(10 minutes)"
 }
 
-variable "api_gateway_name" {
-  description = "Name of the API Gateway to reference"
-  type        = string
-}
-
-variable "api_gateway_protocol_type" {
-  description = "Protocol type for the API Gateway (HTTP or WEBSOCKET)"
-  type        = string
-  default     = "HTTP"
-}
-
-variable "environment" {
-  description = "Deployment environment name (e.g. dev, prod)"
-  type        = string
-}
-
 variable "homepage_canary_name" {
   description = "Name for the homepage Canary (lowercase/hyphens/underscores)"
   type        = string
@@ -68,4 +52,19 @@ variable "api_canary_name" {
     condition     = can(regex("^[a-z0-9_-]+$", var.api_canary_name))
     error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
+}
+
+variable "backend_state_bucket" {
+  description = "S3 bucket where the backend Terraform state lives"
+  type        = string
+}
+
+variable "backend_state_key" {
+  description = "Key path to the backend .tfstate file (e.g. backend/prod/terraform.tfstate)"
+  type        = string
+}
+
+variable "backend_lock_table" {
+  description = "DynamoDB table used for backend state locking"
+  type        = string
 }
