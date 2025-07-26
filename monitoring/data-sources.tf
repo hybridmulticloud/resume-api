@@ -1,10 +1,18 @@
-# Fetch the list of HTTP/WebSocket APIs by name,
-# then pick the first ID into a local for easy reuse.
-data "aws_apigatewayv2_apis" "monitored_api" {
-  name          = var.api_gateway_name
-  protocol_type = var.api_gateway_protocol_type
+# Pull in your backend stack’s outputs (api_endpoint, etc.)
+data "terraform_remote_state" "backend" {
+  backend = "s3"
+  config = {
+    bucket         = var.backend_state_bucket
+    key            = var.backend_state_key
+    region         = var.aws_region
+    dynamodb_table = var.backend_lock_table
+  }
 }
 
 locals {
-  api_id = tolist(data.aws_apigatewayv2_apis.monitored_api.ids)[0]
+  # The full invoke URL, e.g. https://abc123.execute-api.us-east-1.amazonaws.com/Prod
+  api_endpoint = data.terraform_remote_state.backend.outputs.api_endpoint
+
+  # Extract the API ID (“abc123” above) via regex
+  api_id = regex("^https://([^\\.]+)\\.", local.api_endpoint)
 }
