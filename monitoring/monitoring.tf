@@ -10,7 +10,6 @@ resource "aws_sns_topic_subscription" "email" {
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name        = "${var.rest_api_id}-api-5xx"
-  alarm_description = "API Gateway 5XX errors"
   namespace         = "AWS/ApiGateway"
   metric_name       = "5XXError"
   dimensions = {
