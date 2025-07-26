@@ -1,5 +1,8 @@
 data "aws_apigatewayv2_apis" "by_name" {
-  names = [var.project_name]
+  filter {
+    name   = "Name"
+    values = [var.project_name]
+  }
 }
 
 locals {
