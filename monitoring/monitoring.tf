@@ -8,7 +8,6 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
-# API Gateway 5XX alarm
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name          = "${var.rest_api_id}-api-5xx"
   alarm_description   = "API Gateway 5XX errors"
@@ -26,7 +25,6 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-# Lambda Errors alarm
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${var.lambda_function_name}-errors"
   namespace           = "AWS/Lambda"
@@ -42,7 +40,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-# Synthetics canary: homepage check
 resource "aws_synthetics_canary" "homepage" {
   name                   = "${var.rest_api_id}-homepage-canary"
   artifact_s3_location   = "s3://${var.canary_artifact_bucket}/homepage/"
@@ -57,21 +54,15 @@ resource "aws_synthetics_canary" "homepage" {
 
   code {
     handler = "index.handler"
-    script  = <<-EOF
-      const synthetics = require('Synthetics');
-      const page = await synthetics.getPage();
-      const res = await page.goto("https://${aws_cloudfront_distribution.main.domain_name}", { waitUntil: 'networkidle0' });
-      if (res.status() !== 200) throw new Error(`Status ${res.status()}`);
-    EOF
+    script  = file("${path.module}/canary-homepage.js")
   }
 }
 
-# Synthetics canary: visitor-counter API check
 resource "aws_synthetics_canary" "api" {
-  name                 = "${var.rest_api_id}-api-canary"
-  artifact_s3_location = "s3://${var.canary_artifact_bucket}/api/"
-  execution_role_arn   = var.canary_execution_role_arn
-  runtime_version      = "syn-nodejs-4.0"
+  name                   = "${var.rest_api_id}-api-canary"
+  artifact_s3_location   = "s3://${var.canary_artifact_bucket}/api/"
+  execution_role_arn     = var.canary_execution_role_arn
+  runtime_version        = "syn-nodejs-4.0"
 
   schedule {
     expression = "rate(5 minutes)"
@@ -81,27 +72,17 @@ resource "aws_synthetics_canary" "api" {
 
   code {
     handler = "index.handler"
-    script  = <<-EOF
-      const synthetics = require('Synthetics');
-      const log = require('SyntheticsLogger');
-      const url = "https://${aws_api_gateway_rest_api.main.execution_arn}/${var.api_stage_name}/UpdateVisitorCount";
-      const res = await synthetics.executeHttpStep('post-count', {
-        url,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      if (res.statusCode !== 200) throw new Error(`Status ${res.statusCode}`);
-    EOF
+    script  = file("${path.module}/canary-api.js")
   }
 }
 
-# Canary failure alarms
 resource "aws_cloudwatch_metric_alarm" "homepage_canary_fail" {
   alarm_name          = "${var.rest_api_id}-homepage-canary-fail"
   namespace           = "CloudWatchSynthetics"
   metric_name         = "Failed"
-  dimensions = { CanaryName = aws_synthetics_canary.homepage.name }
+  dimensions = {
+    CanaryName = aws_synthetics_canary.homepage.name
+  }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
@@ -114,7 +95,9 @@ resource "aws_cloudwatch_metric_alarm" "api_canary_fail" {
   alarm_name          = "${var.rest_api_id}-api-canary-fail"
   namespace           = "CloudWatchSynthetics"
   metric_name         = "Failed"
-  dimensions = { CanaryName = aws_synthetics_canary.api.name }
+  dimensions = {
+    CanaryName = aws_synthetics_canary.api.name
+  }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
@@ -123,7 +106,6 @@ resource "aws_cloudwatch_metric_alarm" "api_canary_fail" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
-# Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.rest_api_id}-dashboard"
   dashboard_body = jsonencode({
