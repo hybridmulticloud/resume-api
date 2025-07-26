@@ -15,6 +15,9 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # CloudWatch Alarm: Lambda Function Errors
@@ -29,6 +32,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
+  lifecycle {
+    prevent_destroy = true
+  }  
 }
 
 # CloudWatch Dashboard combining both metrics
@@ -66,6 +72,9 @@ resource "aws_cloudwatch_dashboard" "main" {
           period = 300
           region = var.aws_region
           title  = "Lambda Function Errors"
+          lifecycle {
+          prevent_destroy = true
+          }
         }
       }
     ]
