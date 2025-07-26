@@ -12,9 +12,7 @@ env:
   # Alert email for SNS subscriptions
   TF_VAR_alert_email:         ${{ secrets.ALERT_EMAIL_ADDRESS }}
 
-  # AWS credentials & region
-  AWS_ACCESS_KEY_ID:          ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY:      ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  # AWS region (shared)
   AWS_REGION:                 ${{ secrets.AWS_REGION }}
   AWS_DEFAULT_REGION:         ${{ secrets.AWS_REGION }}
 
@@ -28,12 +26,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials for Monitoring
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region:            ${{ env.AWS_REGION }}
-          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
 
       - name: Clean Terraform cache
         run: |
