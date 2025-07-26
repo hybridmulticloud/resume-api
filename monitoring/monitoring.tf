@@ -1,5 +1,6 @@
+# SNS topic for alerts
 resource "aws_sns_topic" "alerts" {
-  name = "${data.aws_api_gateway_rest_api.api.name}-alerts"
+  name = "${var.project_name}-alerts"
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -8,13 +9,13 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
+# API Gateway 5XX alarm
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
-  alarm_name        = "${data.aws_api_gateway_rest_api.api.name}-api-5xx"
-  namespace         = "AWS/ApiGateway"
-  metric_name       = "5XXError"
+  alarm_name          = "${var.project_name}-api-5xx"
+  namespace           = "AWS/ApiGateway"
+  metric_name         = "5XXError"
   dimensions = {
-    ApiId = data.aws_api_gateway_rest_api.api.id
-    Stage = var.api_stage_name
+    ApiId = data.aws_apigatewayv2_api.api.id
   }
   statistic           = "Sum"
   period              = 300
@@ -24,10 +25,11 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
+# Lambda Errors alarm
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  alarm_name        = "${var.lambda_function_name}-errors"
-  namespace         = "AWS/Lambda"
-  metric_name       = "Errors"
+  alarm_name          = "${var.lambda_function_name}-errors"
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
   dimensions = {
     FunctionName = var.lambda_function_name
   }
@@ -39,9 +41,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
+# Dashboard combining API & Lambda
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${data.aws_api_gateway_rest_api.api.name}-dashboard"
-
+  dashboard_name = "${var.project_name}-dashboard"
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -51,11 +53,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [
-            [ "AWS/ApiGateway", "5XXError", "ApiId", data.aws_api_gateway_rest_api.api.id, "Stage", var.api_stage_name ]
-          ]
-          region = var.aws_region
-          stat   = "Sum"
+          metrics = [[ "AWS/ApiGateway", "5XXError", "ApiId", data.aws_apigatewayv2_api.api.id ]]
+          region  = var.aws_region
+          stat    = "Sum"
         }
       },
       {
@@ -65,11 +65,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [
-            [ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]
-          ]
-          region = var.aws_region
-          stat   = "Sum"
+          metrics = [[ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]]
+          region  = var.aws_region
+          stat    = "Sum"
         }
       }
     ]
