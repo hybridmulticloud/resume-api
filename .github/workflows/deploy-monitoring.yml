@@ -39,11 +39,6 @@ jobs:
         working-directory: monitoring
         run: terraform init -upgrade
 
-      - name: Import existing Synthetics role
-        working-directory: monitoring
-        run: |
-          terraform import aws_iam_role.canary_role resume-api-canary || true
-
       - name: Terraform Validate
         working-directory: monitoring
         run: terraform validate
