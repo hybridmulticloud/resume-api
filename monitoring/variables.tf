@@ -1,5 +1,11 @@
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
 variable "rest_api_id" {
-  description = "The REST API Gateway ID"
+  description = "API Gateway REST API ID"
   type        = string
 }
 
@@ -13,16 +19,6 @@ variable "lambda_function_name" {
   type        = string
 }
 
-variable "alert_email" {
-  description = "Email to receive alert notifications"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region to deploy resources in"
-  type        = string
-}
-
 variable "canary_artifact_bucket" {
   description = "S3 bucket to store canary test artifacts"
   type        = string
@@ -30,6 +26,11 @@ variable "canary_artifact_bucket" {
 
 variable "canary_execution_role_arn" {
   description = "IAM role ARN for running synthetic canaries"
+  type        = string
+}
+
+variable "alert_email" {
+  description = "Email to receive alert notifications"
   type        = string
 }
 
