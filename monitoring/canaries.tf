@@ -1,64 +1,60 @@
-locals {
-  homepage_dir = "${path.module}/canaries/homepage"
-  api_dir      = "${path.module}/canaries/api"
+resource "aws_iam_role" "canary_exec_role" {
+  name = "${var.project_name}-synthetics-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "synthetics.amazonaws.com" }
+    }]
+  })
 }
 
-data "archive_file" "homepage_zip" {
-  type        = "zip"
-  source_dir  = local.homepage_dir
-  output_path = "${path.module}/homepage.zip"
+resource "aws_iam_role_policy_attachment" "canary_logs" {
+  role       = aws_iam_role.canary_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-data "archive_file" "api_zip" {
-  type        = "zip"
-  source_dir  = local.api_dir
-  output_path = "${path.module}/api.zip"
+resource "aws_iam_role_policy_attachment" "canary_synthetics" {
+  role       = aws_iam_role.canary_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
+# ---- Homepage Canary ----
 resource "aws_synthetics_canary" "homepage" {
-  name                 = var.homepage_canary_name
-  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage/"
-  execution_role_arn   = var.canary_execution_role_arn
-  runtime_version      = "syn-nodejs-puppeteer-3.6"
-  handler              = "index.handler"
-  start_canary         = true
-
+  name               = var.homepage_canary_name
+  execution_role_arn = aws_iam_role.canary_exec_role.arn
+  runtime_version    = "syn-python-selenium-1.0"
   schedule {
-    expression          = var.schedule_expression
-    duration_in_seconds = 120
+    expression = var.schedule_expression
   }
+  artifact_s3_location = "s3://${data.aws_s3_bucket.site.bucket}/canary-artifacts/${var.homepage_canary_name}"
+  handler               = "pageLoadBlueprint.handler"
 
-  run_config {
-    timeout_in_seconds = 60
-  }
-
-  zip_file = filebase64(data.archive_file.homepage_zip.output_path)
-
-  tags = {
-    Component = "HomepageCanary"
+  code {
+    handler = "pageLoadBlueprint.handler"
+    bucket  = data.aws_s3_bucket.site.bucket
+    key     = "canary-scripts/homepage.zip"
   }
 }
 
+# ---- API Canary ----
 resource "aws_synthetics_canary" "api" {
-  name                 = var.api_canary_name
-  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api/"
-  execution_role_arn   = var.canary_execution_role_arn
-  runtime_version      = "syn-nodejs-puppeteer-3.6"
-  handler              = "index.handler"
-  start_canary         = false
-
+  name               = var.api_canary_name
+  execution_role_arn = aws_iam_role.canary_exec_role.arn
+  runtime_version    = "syn-nodejs-puppeteer-3.2"
   schedule {
-    expression          = var.schedule_expression
-    duration_in_seconds = 120
+    expression = var.schedule_expression
+  }
+  artifact_s3_location = "s3://${data.aws_s3_bucket.site.bucket}/canary-artifacts/${var.api_canary_name}"
+  handler               = "apiTest.handler"
+
+  code {
+    handler = "apiTest.handler"
+    bucket  = data.aws_s3_bucket.site.bucket
+    key     = "canary-scripts/api.zip"
   }
 
-  run_config {
-    timeout_in_seconds = 60
-  }
-
-  zip_file = filebase64(data.archive_file.api_zip.output_path)
-
-  tags = {
-    Component = "ApiCanary"
-  }
+  depends_on = [aws_iam_role_policy_attachment.canary_synthetics]
 }
