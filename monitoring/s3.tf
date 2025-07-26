@@ -1,4 +1,4 @@
-# S3 bucket for storing Canary artifacts
+# Canary artifacts S3 bucket
 resource "aws_s3_bucket" "canary_artifacts" {
   bucket        = "canary-artifacts-${var.environment}"
   force_destroy = true
