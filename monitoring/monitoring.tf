@@ -1,4 +1,4 @@
-# SNS topic for alerts
+# SNS Topic for all alarms
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-alerts"
 }
@@ -9,13 +9,13 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
-# API Gateway 5XX alarm
+# API Gateway v2 5XX Error Alarm
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name          = "${var.project_name}-api-5xx"
   namespace           = "AWS/ApiGateway"
   metric_name         = "5XXError"
   dimensions = {
-    ApiId = data.aws_apigatewayv2_api.api.id
+    ApiId = local.api_id
   }
   statistic           = "Sum"
   period              = 300
@@ -23,9 +23,10 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
-# Lambda Errors alarm
+# Lambda Function Errors Alarm
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${var.lambda_function_name}-errors"
   namespace           = "AWS/Lambda"
@@ -39,9 +40,10 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
-# Dashboard combining API & Lambda
+# Combined CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-dashboard"
   dashboard_body = jsonencode({
@@ -53,9 +55,13 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [[ "AWS/ApiGateway", "5XXError", "ApiId", data.aws_apigatewayv2_api.api.id ]]
+          metrics = [
+            [ "AWS/ApiGateway", "5XXError", "ApiId", local.api_id ]
+          ]
           region  = var.aws_region
+          title   = "API Gateway 5XX Errors"
           stat    = "Sum"
+          period  = 300
         }
       },
       {
@@ -65,9 +71,13 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [[ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]]
+          metrics = [
+            [ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]
+          ]
           region  = var.aws_region
+          title   = "Lambda Function Errors"
           stat    = "Sum"
+          period  = 300
         }
       }
     ]
