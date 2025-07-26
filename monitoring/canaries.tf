@@ -1,9 +1,3 @@
-# Generate a random suffix so buckets are globally unique
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# Build the assume-role policy for Synthetics Canaries
 data "aws_iam_policy_document" "canary_assume" {
   statement {
     effect = "Allow"
@@ -15,9 +9,8 @@ data "aws_iam_policy_document" "canary_assume" {
   }
 }
 
-# IAM role for your Synthetics Canary
 resource "aws_iam_role" "canary_role" {
-  name               = "${var.project_name}-synthetics-role"
+  name               = var.api_canary_name
   assume_role_policy = data.aws_iam_policy_document.canary_assume.json
 
   lifecycle {
@@ -27,24 +20,38 @@ resource "aws_iam_role" "canary_role" {
   }
 }
 
-# Attach AWS-managed policies
 resource "aws_iam_role_policy_attachment" "basic" {
   role       = aws_iam_role.canary_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
 resource "aws_iam_role_policy_attachment" "synthetics" {
   role       = aws_iam_role.canary_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
-# S3 bucket for raw Canary artifacts
-resource "aws_s3_bucket" "artifacts" {
-  bucket        = "${var.project_name}-canary-artifacts"
-  force_destroy = true
+resource "aws_synthetics_canary" "api" {
+  name                 = var.api_canary_name
+  execution_role_arn   = aws_iam_role.canary_role.arn
+  runtime_version      = "syn-nodejs-puppeteer-3.6"
+  handler              = "index.handler"
+  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
+  zip_file             = filebase64("${path.module}/scripts/api-canary.zip")
 
-  lifecycle {
-    prevent_destroy = true
+  schedule {
+    expression = var.schedule_expression
   }
 }
 
-# (Remove any aws_s3_bucket_acl blocks—new buckets enforce “owner-only” by default.)
+resource "aws_synthetics_canary" "homepage" {
+  name                 = var.homepage_canary_name
+  execution_role_arn   = aws_iam_role.canary_role.arn
+  runtime_version      = "syn-python-selenium-1.0"
+  handler              = "pageLoadBlueprint.handler"
+  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
+  zip_file             = filebase64("${path.module}/scripts/homepage-canary.zip")
+
+  schedule {
+    expression = var.schedule_expression
+  }
+}
