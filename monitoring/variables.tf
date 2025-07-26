@@ -30,7 +30,7 @@ variable "canary_execution_role_arn" {
 }
 
 variable "alert_email" {
-  description = "Email to receive alert notifications"
+  description = "Email to receive alarm notifications"
   type        = string
 }
 
