@@ -31,12 +31,12 @@ jobs:
           aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Install Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Terraform Init & Apply
+      - name: Terraform Init & Apply (infra)
         working-directory: infra
         run: |
           terraform init -input=false
@@ -51,11 +51,17 @@ jobs:
           terraform output -raw route53_zone_id            > route53_zone_id.txt
           terraform output -raw frontend_bucket_name       > frontend_bucket_name.txt
 
-      - name: Upload IDs
+      - name: Upload infra outputs (IDs)
         uses: actions/upload-artifact@v4
         with:
           name: infra-outputs
           path: infra/*.txt
+
+      - name: Upload infra state file
+        uses: actions/upload-artifact@v4
+        with:
+          name: infra-state
+          path: infra/terraform.tfstate
 
   import_frontend:
     name: Import Existing Frontend Resources
@@ -71,7 +77,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download infra-outputs
+      - name: Download infra state file
+        uses: actions/download-artifact@v4
+        with:
+          name: infra-state
+          path: infra
+
+      - name: Download infra outputs
         uses: actions/download-artifact@v4
         with:
           name: infra-outputs
@@ -84,12 +96,12 @@ jobs:
           aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Install Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Terraform Init
+      - name: Terraform Init (infra)
         working-directory: infra
         run: terraform init -input=false
 
@@ -100,7 +112,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_s3_bucket\.frontend$"; then
             terraform import aws_s3_bucket.frontend "$BUCKET"
           else
-            echo "✅ aws_s3_bucket.frontend already in state, skipping import"
+            echo "✅ aws_s3_bucket.frontend already in state"
           fi
 
       - name: Import S3 public access block if missing
