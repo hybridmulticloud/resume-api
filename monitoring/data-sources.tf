@@ -1,14 +1,12 @@
-data "terraform_remote_state" "backend" {
+data "terraform_remote_state" "infra" {
   backend = "remote"
   config = {
     organization = "hybridmulticloud"
-    workspaces = {
-      name = "resume-api-backend"
-    }
+    workspaces   = { name = "resume-api-infra" }
   }
 }
 
 locals {
-  api_endpoint = data.terraform_remote_state.backend.outputs.api_endpoint
-  api_id       = regex("^https://([^\\.]+)\\.", local.api_endpoint)[0]
+  api_gateway_id       = data.terraform_remote_state.infra.outputs.api_gateway_id
+  lambda_function_name = data.terraform_remote_state.infra.outputs.lambda_function_name
 }
