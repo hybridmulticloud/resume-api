@@ -13,6 +13,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
+  statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
@@ -26,6 +27,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
+  statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 
