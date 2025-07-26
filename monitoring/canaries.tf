@@ -1,12 +1,11 @@
+// build assume-role policy
 data "aws_iam_policy_document" "canary_assume" {
   statement {
     effect = "Allow"
-
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
     }
-
     actions = ["sts:AssumeRole"]
   }
 }
@@ -32,16 +31,21 @@ resource "aws_iam_role_policy_attachment" "synthetics" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
+// zip the API folder
+data "archive_file" "api_canary" {
+  type       = "zip"
+  source_dir = "${path.module}/canaries/api"
+}
+
+// API canary
 resource "aws_synthetics_canary" "api" {
   name                 = var.api_canary_name
   execution_role_arn   = aws_iam_role.canary_role.arn
   runtime_version      = "syn-nodejs-puppeteer-3.6"
-  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/${var.api_canary_name}"
+  handler              = "index.handler"
+  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
 
-  code {
-    handler = "index.handler"
-    script  = file("${path.module}/canaries/api/index.js")
-  }
+  zip_file = data.archive_file.api_canary.output_base64
 
   schedule {
     expression = var.schedule_expression
@@ -52,16 +56,21 @@ resource "aws_synthetics_canary" "api" {
   }
 }
 
+// zip the homepage folder
+data "archive_file" "homepage_canary" {
+  type       = "zip"
+  source_dir = "${path.module}/canaries/homepage"
+}
+
+// Homepage canary
 resource "aws_synthetics_canary" "homepage" {
   name                 = var.homepage_canary_name
   execution_role_arn   = aws_iam_role.canary_role.arn
   runtime_version      = "syn-python-selenium-1.0"
-  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/${var.homepage_canary_name}"
+  handler              = "pageLoadBlueprint.handler"
+  artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
 
-  code {
-    handler = "pageLoadBlueprint.handler"
-    script  = file("${path.module}/canaries/homepage/index.js")
-  }
+  zip_file = data.archive_file.homepage_canary.output_base64
 
   schedule {
     expression = var.schedule_expression
