@@ -16,7 +16,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Terraform
+      - name: Clean up stale Terraform cache
+        run: |
+          rm -rf monitoring/.terraform
+          rm -f monitoring/.terraform.lock.hcl
+
+      - name: Set up Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
