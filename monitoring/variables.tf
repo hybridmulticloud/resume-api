@@ -1,6 +1,7 @@
 variable "aws_region" {
   description = "AWS region to deploy resources into"
   type        = string
+  default     = "us-east-1"
 
   validation {
     condition     = length(var.aws_region) > 0
@@ -21,6 +22,7 @@ variable "rest_api_name" {
 variable "api_stage_name" {
   description = "Stage name for the REST API (e.g. prod, staging)"
   type        = string
+  default     = "prod"
 
   validation {
     condition     = length(var.api_stage_name) > 0
@@ -31,6 +33,7 @@ variable "api_stage_name" {
 variable "lambda_function_name" {
   description = "Name of the existing Lambda function backing your API"
   type        = string
+  default     = "UpdateVisitorCount"
 
   validation {
     condition     = length(var.lambda_function_name) > 0
@@ -51,6 +54,7 @@ variable "cloudfront_distribution_id" {
 variable "site_bucket_name" {
   description = "Name of the existing S3 bucket hosting your SPA"
   type        = string
+  default     = "hybridmulti.cloud"
 
   validation {
     condition     = length(var.site_bucket_name) > 0
@@ -81,6 +85,7 @@ variable "canary_execution_role_arn" {
 variable "schedule_expression" {
   description = "CloudWatch Events schedule expression for canary runs"
   type        = string
+  default     = "rate(10 minutes)"
 
   validation {
     condition     = length(var.schedule_expression) > 0
@@ -91,6 +96,7 @@ variable "schedule_expression" {
 variable "homepage_canary_name" {
   description = "Logical name for the homepage Synthetics Canary (lowercase, numbers, hyphens or underscores only)"
   type        = string
+  default     = "resume-homepage-canary"
 
   validation {
     condition     = can(regex("^[a-z0-9_-]+$", var.homepage_canary_name))
@@ -101,6 +107,7 @@ variable "homepage_canary_name" {
 variable "api_canary_name" {
   description = "Logical name for the API Synthetics Canary (lowercase, numbers, hyphens or underscores only)"
   type        = string
+  default     = "resume-api-canary"
 
   validation {
     condition     = can(regex("^[a-z0-9_-]+$", var.api_canary_name))
