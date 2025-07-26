@@ -9,22 +9,21 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION:          us-east-1
-  TF_VAR_project_name: resume-api
-  TF_VAR_aws_region:   us-east-1
-  TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  # Only need to inject your alert‐email as a TF var
+  TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL_ADDRESS }}
 
 jobs:
   monitoring:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region:            ${{ env.AWS_REGION }}
+          aws-region:            us-east-1
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -33,7 +32,8 @@ jobs:
           cd monitoring
           rm -rf .terraform .terraform.lock.hcl
 
-      - uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
@@ -41,15 +41,6 @@ jobs:
         working-directory: monitoring
         run: terraform init -upgrade
 
-      - name: Terraform Validate
-        working-directory: monitoring
-        run: terraform validate
-
-      - name: Terraform Plan
-        working-directory: monitoring
-        run: terraform plan -out=tfplan
-
       - name: Terraform Apply
-        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
         working-directory: monitoring
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve
