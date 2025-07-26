@@ -34,6 +34,12 @@ variable "lambda_function_name" {
   default     = "UpdateVisitorCount"
 }
 
+variable "lambda_bucket_name" {
+  description = "S3 bucket name for Lambda artifacts"
+  type        = string
+  default     = resume-api-lambda-bucket
+}
+
 variable "lambda_runtime" {
   description = "Lambda runtime version"
   type        = string
