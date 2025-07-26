@@ -1,40 +1,54 @@
 variable "aws_region" {
-  description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  description = "AWS region to deploy into"
 }
 
-variable "rest_api_id" {
-  description = "API Gateway REST API ID"
+variable "rest_api_name" {            # e.g. "my-resume-api"
   type        = string
+  description = "Name of the existing API Gateway REST API"
 }
 
 variable "api_stage_name" {
-  description = "API Gateway stage name"
   type        = string
+  description = "Stage name on that REST API (e.g. prod)"
 }
 
 variable "lambda_function_name" {
-  description = "Lambda function name linked to the API"
   type        = string
+  description = "Name of the Lambda function behind the REST API"
 }
 
-variable "canary_artifact_bucket" {
-  description = "S3 bucket to store canary test artifacts"
+variable "cloudfront_distribution_id" {
   type        = string
+  description = "ID of the CloudFront distribution hosting the SPA"
 }
 
-variable "canary_execution_role_arn" {
-  description = "IAM role ARN for running synthetic canaries"
+variable "site_bucket_name" {
   type        = string
+  description = "Name of the S3 bucket hosting the static site"
 }
 
 variable "alert_email" {
-  description = "Email to receive alarm notifications"
   type        = string
+  description = "Email to receive alarms and canary failure notifications"
 }
 
-variable "cloudfront_domain_name" {
-  description = "CloudFront distribution domain name"
+variable "canary_execution_role_arn" {
   type        = string
+  description = "IAM Role ARN for Synthetic Canary execution"
+}
+
+variable "schedule_expression" {
+  type        = string
+  description = "Cron or rate expression for canary runs (e.g. rate(5 minutes))"
+}
+
+variable "homepage_canary_name" {
+  type        = string
+  description = "Name for the homepage synthetic canary"
+}
+
+variable "api_canary_name" {
+  type        = string
+  description = "Name for the API synthetic canary"
 }
