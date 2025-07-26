@@ -2,10 +2,9 @@ name: Import Canary IAM Role
 on: workflow_dispatch
 
 env:
-  TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-  TF_VAR_project_name:       ${{ secrets.PROJECT_NAME }}
-  TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
-  TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+  TF_VAR_aws_region:   ${{ secrets.AWS_REGION }}
+  TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL_ADDRESS }}
 
 jobs:
   import-role:
@@ -15,30 +14,35 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS creds
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region:            ${{ secrets.AWS_REGION }}
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI
+      - name: Setup Terraform CLI v1.5.7
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Terraform Init (reconfigure backend)
-        working-directory: monitoring
-        run: terraform init -input=false -no-color -reconfigure
+      - name: Authenticate to Terraform Cloud
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          # this writes ~/.terraform.d/credentials.tfrc.json for you
+          terraform login -no-color -token="$TF_API_TOKEN"
+          # sanity-check
+          echo ">>> ~/.terraform.d/credentials.tfrc.json <<<"
+          sed -n '1,20p' ~/.terraform.d/credentials.tfrc.json
 
-      - name: Terraform Validate
+      - name: Init, Import & Plan in one shell
         working-directory: monitoring
-        run: terraform validate -no-color
-
-      - name: Import Existing IAM Role
-        working-directory: monitoring
-        run: terraform import aws_iam_role.canary_role resume-monitoring-canary-role
-
-      - name: Verify Import with Plan
-        working-directory: monitoring
-        run: terraform plan -input=false -no-color
+        env:
+          # double ensure TF sees your token
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          terraform init -no-color -reconfigure
+          terraform validate -no-color
+          terraform import aws_iam_role.canary_role resume-monitoring-canary-role
+          terraform plan -no-color -input=false
