@@ -18,3 +18,8 @@ output "api_gateway_id" {
   description = "The ID of the API Gateway identified by name"
   value       = data.aws_apigatewayv2_api.main.id
 }
+
+output "monitored_api_id" {
+  description = "The ID of the monitored API Gateway"
+  value       = data.aws_apigatewayv2_api.monitored_api.id
+}
