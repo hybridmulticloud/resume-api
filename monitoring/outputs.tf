@@ -14,12 +14,13 @@ output "dashboard_name" {
   value = aws_cloudwatch_dashboard.main.dashboard_name
 }
 
+# Now outputs pull from the local.api_id instead of a (non-existent) data source
 output "api_gateway_id" {
   description = "The ID of the API Gateway identified by name"
-  value       = data.aws_apigatewayv2_api.main.id
+  value       = local.api_id
 }
 
 output "monitored_api_id" {
   description = "The ID of the monitored API Gateway"
-  value       = data.aws_apigatewayv2_api.monitored_api.id
+  value       = local.api_id
 }
