@@ -1,3 +1,16 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
 resource "aws_sns_topic" "alerts" {
   name = "${var.rest_api_id}-alerts"
 }
@@ -40,11 +53,11 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 }
 
 resource "aws_synthetics_canary" "homepage" {
-  name                   = "${var.rest_api_id}-homepage-canary"
-  artifact_s3_location   = "s3://${var.canary_artifact_bucket}/homepage/"
-  execution_role_arn     = var.canary_execution_role_arn
-  runtime_version        = "syn-nodejs-4.0"
-  handler                = "index.handler"
+  name                 = "${var.rest_api_id}-homepage-canary"
+  artifact_s3_location = "s3://${var.canary_artifact_bucket}/homepage/"
+  execution_role_arn   = var.canary_execution_role_arn
+  runtime_version      = "syn-nodejs-4.0"
+  start_canary         = true
 
   schedule {
     expression = "rate(5 minutes)"
@@ -54,15 +67,17 @@ resource "aws_synthetics_canary" "homepage" {
     timeout_in_seconds = 60
   }
 
-script = <<-EOT
-  const synthetics = require('Synthetics');
-  const page = await synthetics.getPage();
-  const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
-  if (res.status() !== 200) {
-    throw new Error(`Homepage returned status $${res.status()}`);
+  code {
+    handler = "index.handler"
+    script  = <<-EOT
+      const synthetics = require('Synthetics');
+      const page = await synthetics.getPage();
+      const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
+      if (res.status() !== 200) {
+        throw new Error(`Homepage returned status $${res.status()}`);
+      }
+    EOT
   }
-EOT
-
 
   tags = {
     Name = "Homepage Canary"
@@ -70,11 +85,11 @@ EOT
 }
 
 resource "aws_synthetics_canary" "api" {
-  name                   = "${var.rest_api_id}-api-canary"
-  artifact_s3_location   = "s3://${var.canary_artifact_bucket}/api/"
-  execution_role_arn     = var.canary_execution_role_arn
-  runtime_version        = "syn-nodejs-4.0"
-  handler                = "index.handler"
+  name                 = "${var.rest_api_id}-api-canary"
+  artifact_s3_location = "s3://${var.canary_artifact_bucket}/api/"
+  execution_role_arn   = var.canary_execution_role_arn
+  runtime_version      = "syn-nodejs-4.0"
+  start_canary         = true
 
   schedule {
     expression = "rate(5 minutes)"
@@ -84,20 +99,23 @@ resource "aws_synthetics_canary" "api" {
     timeout_in_seconds = 60
   }
 
-  script = <<-EOT
-    const synthetics = require('Synthetics');
-    const log = require('SyntheticsLogger');
-    const url = "https://${var.rest_api_id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_stage_name}/UpdateVisitorCount";
-    const res = await synthetics.executeHttpStep('post-count', {
-      url,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    if (res.statusCode !== 200) {
-      throw new Error(\`API returned status \${res.statusCode}\`);
-    }
-  EOT
+  code {
+    handler = "index.handler"
+    script  = <<-EOT
+      const synthetics = require('Synthetics');
+      const log = require('SyntheticsLogger');
+      const url = "https://${var.rest_api_id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_stage_name}/UpdateVisitorCount";
+      const res = await synthetics.executeHttpStep('post-count', {
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (res.statusCode !== 200) {
+        throw new Error(`API returned status $${res.statusCode}`);
+      }
+    EOT
+  }
 
   tags = {
     Name = "API Canary"
