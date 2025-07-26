@@ -1,3 +1,7 @@
+#############################
+# monitoring/variables.tf
+#############################
+
 variable "project_name" {
   description = "Base name for all resources (matches infra default)"
   type        = string
@@ -33,7 +37,7 @@ variable "schedule_expression" {
 }
 
 variable "homepage_canary_name" {
-  description = "Name for the homepage Canary (lowercase/hyphens/underscores)"
+  description = "Name for the homepage Canary"
   type        = string
   default     = "resume-homepage-canary"
 
@@ -44,7 +48,7 @@ variable "homepage_canary_name" {
 }
 
 variable "api_canary_name" {
-  description = "Name for the API Canary (lowercase/hyphens/underscores)"
+  description = "Name for the API Canary"
   type        = string
   default     = "resume-api-canary"
 
