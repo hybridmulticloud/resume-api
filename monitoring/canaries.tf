@@ -29,6 +29,10 @@ resource "aws_synthetics_canary" "homepage" {
 
   start_canary = true
   zip_file     = data.archive_file.homepage_zip.output_base64
+
+  tags = {
+    Component = "HomepageCanary"
+  }
 }
 
 resource "aws_synthetics_canary" "api" {
@@ -47,4 +51,8 @@ resource "aws_synthetics_canary" "api" {
 
   start_canary = false
   zip_file     = data.archive_file.api_zip.output_base64
+
+  tags = {
+    Component = "ApiCanary"
+  }
 }
