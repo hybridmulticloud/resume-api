@@ -53,24 +53,3 @@ variable "api_canary_name" {
     error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
 }
-
-variable "backend_state_bucket" {
-  description = "S3 bucket where the backend Terraform state lives"
-  type        = string
-}
-
-variable "backend_state_key" {
-  description = "Key path to the backend .tfstate file (e.g. backend/prod/terraform.tfstate)"
-  type        = string
-}
-
-variable "backend_lock_table" {
-  description = "DynamoDB table used for backend state locking"
-  type        = string
-}
-
-variable "environment" {
-  description = "Deployment environment for naming (e.g. dev, prod)"
-  type        = string
-  default     = "prod"
-}
