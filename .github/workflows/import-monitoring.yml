@@ -35,18 +35,25 @@ jobs:
 
       - name: Import Synthetics IAM Role
         working-directory: monitoring
-        run: terraform import aws_iam_role.canary_role resume-api-synthetics-role
+        run: terraform import \
+          -var="alert_email=${{ secrets.ALERT_EMAIL_ADDRESS }}" \
+          aws_iam_role.canary_role resume-api-synthetics-role
 
       - name: Import Canary Artifacts S3 Bucket
         working-directory: monitoring
-        run: terraform import aws_s3_bucket.artifacts resume-api-canary-artifacts
+        run: terraform import \
+          -var="alert_email=${{ secrets.ALERT_EMAIL_ADDRESS }}" \
+          aws_s3_bucket.artifacts resume-api-canary-artifacts
 
       - name: Import Alerts SNS Topic
         working-directory: monitoring
-        run: terraform import aws_sns_topic.alerts arn:aws:sns:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:resume-api-alerts
+        run: terraform import \
+          -var="alert_email=${{ secrets.ALERT_EMAIL_ADDRESS }}" \
+          aws_sns_topic.alerts arn:aws:sns:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:resume-api-alerts
 
       - name: Verify import with plan
         working-directory: monitoring
         run: |
-          terraform plan -out=tfplan
+          terraform plan -out=tfplan \
+            -var="alert_email=${{ secrets.ALERT_EMAIL_ADDRESS }}"
           terraform show -json tfplan
