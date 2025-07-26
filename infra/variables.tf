@@ -37,7 +37,7 @@ variable "lambda_function_name" {
 variable "lambda_bucket_name" {
   description = "S3 bucket name for Lambda artifacts"
   type        = string
-  default     = resume-api-lambda-bucket
+  default     = "resume-api-lambda-bucket"
 }
 
 variable "lambda_runtime" {
