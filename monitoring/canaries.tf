@@ -24,7 +24,7 @@ resource "aws_synthetics_canary" "api" {
   runtime_version      = "syn-nodejs-puppeteer-3.6"
   handler              = "index.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
-  zip_file             = data.archive_file.api_canary.output_base64
+  zip_file = filebase64(data.archive_file.api_canary.output_path)
 
   schedule {
     expression = var.schedule_expression
