@@ -6,7 +6,6 @@ resource "random_id" "suffix" {
 # S3 bucket for Canary artifacts
 resource "aws_s3_bucket" "canary_artifacts" {
   bucket        = "canary-artifacts-${random_id.suffix.hex}"
-  acl           = "private"
   force_destroy = true
 
   tags = {
