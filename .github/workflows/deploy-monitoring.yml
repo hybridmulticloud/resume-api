@@ -5,6 +5,7 @@ on:
     paths:
       - monitoring/**
       - .github/workflows/deploy-monitoring.yml
+      - monitoring/canary-*.js
   schedule:
     - cron: '0 * * * *'
 
@@ -27,9 +28,18 @@ jobs:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: Include Canary Scripts
+        run: |
+          echo "Ensuring canary scripts are present:"
+          ls monitoring/canary-*.js || echo "Canary scripts not found!"
+
       - name: Terraform Init
         working-directory: monitoring
         run: terraform init
+
+      - name: Terraform Validate
+        working-directory: monitoring
+        run: terraform validate
 
       - name: Terraform Apply
         working-directory: monitoring
