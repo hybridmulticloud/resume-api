@@ -18,6 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download infra state artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: infra-state
+          path: infra
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -37,7 +43,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init -upgrade
+        run: terraform init -backend=false -upgrade
 
       - name: Terraform Validate
         working-directory: monitoring
