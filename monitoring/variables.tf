@@ -1,7 +1,3 @@
-#############################
-# monitoring/variables.tf
-#############################
-
 variable "project_name" {
   description = "Base name for all resources (matches infra default)"
   type        = string
