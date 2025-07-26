@@ -1,6 +1,12 @@
+# S3 bucket for storing Canary artifacts
 resource "aws_s3_bucket" "canary_artifacts" {
-  bucket = "canary-artifacts-${var.environment}"
+  bucket        = "canary-artifacts-${var.environment}"
   force_destroy = true
+
+  tags = {
+    Environment = var.environment
+    Name        = "canary-artifacts"
+  }
 }
 
 resource "aws_s3_bucket_versioning" "canary_artifacts_versioning" {
