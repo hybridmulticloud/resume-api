@@ -54,14 +54,15 @@ resource "aws_synthetics_canary" "homepage" {
     timeout_in_seconds = 60
   }
 
-  script = <<-EOT
-    const synthetics = require('Synthetics');
-    const page = await synthetics.getPage();
-    const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
-    if (res.status() !== 200) {
-      throw new Error(\`Homepage returned status \${res.status()}\`);
-    }
-  EOT
+script = <<-EOT
+  const synthetics = require('Synthetics');
+  const page = await synthetics.getPage();
+  const res = await page.goto("https://${var.cloudfront_domain_name}", { waitUntil: 'networkidle0' });
+  if (res.status() !== 200) {
+    throw new Error(`Homepage returned status $${res.status()}`);
+  }
+EOT
+
 
   tags = {
     Name = "Homepage Canary"
