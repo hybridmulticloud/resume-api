@@ -15,7 +15,7 @@ data "terraform_remote_state" "infra" {
 # Update each key to the exact name you declared in infra/outputs.tf.
 locals {
   api_url             = data.terraform_remote_state.infra.outputs.api_gateway_url
-  api_gateway_id        = data.terraform_remote_state.infra.outputs.api_gateway_id
+  api_gateway_id   = split(".", replace(local.api_endpoint, "https://", ""))[0]
   lambda_function_arn = data.terraform_remote_state.infra.outputs.lambda_function_arn
   lambda_function_name  = var.lambda_function_name
   
