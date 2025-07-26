@@ -1,6 +1,5 @@
 name: Import Monitoring Resources
 
-# Only run this when manually triggered
 on:
   workflow_dispatch:
 
@@ -11,7 +10,7 @@ env:
 
 jobs:
   import:
-    name: Import existing IAM Role, S3 Bucket & SNS Topic
+    name: Import existing Monitoring Resources
     runs-on: ubuntu-latest
 
     steps:
@@ -25,25 +24,29 @@ jobs:
           aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.7"
+
       - name: Initialize Terraform
         working-directory: monitoring
         run: terraform init -upgrade
 
       - name: Import Synthetics IAM Role
         working-directory: monitoring
-        run: |
-          terraform import aws_iam_role.canary_role resume-api-synthetics-role
+        run: terraform import aws_iam_role.canary_role resume-api-synthetics-role
 
       - name: Import Canary Artifacts S3 Bucket
         working-directory: monitoring
-        run: |
-          terraform import aws_s3_bucket.artifacts resume-api-canary-artifacts
+        run: terraform import aws_s3_bucket.artifacts resume-api-canary-artifacts
 
       - name: Import Alerts SNS Topic
         working-directory: monitoring
-        run: |
-          terraform import aws_sns_topic.alerts arn:aws:sns:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:resume-api-alerts
+        run: terraform import aws_sns_topic.alerts arn:aws:sns:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:resume-api-alerts
 
-      - name: Verify import
+      - name: Verify import with plan
         working-directory: monitoring
-        run: terraform plan -out=tfplan && terraform show -json tfplan
+        run: |
+          terraform plan -out=tfplan
+          terraform show -json tfplan
