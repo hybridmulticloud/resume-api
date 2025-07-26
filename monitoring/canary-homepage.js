@@ -3,6 +3,7 @@ resource "aws_synthetics_canary" "homepage" {
   artifact_s3_location   = "s3://${var.canary_artifact_bucket}/homepage/"
   execution_role_arn     = var.canary_execution_role_arn
   runtime_version        = "syn-nodejs-4.0"
+  handler                = "index.handler"
 
   schedule {
     expression = "rate(5 minutes)"
@@ -12,9 +13,8 @@ resource "aws_synthetics_canary" "homepage" {
     timeout_in_seconds = 60
   }
 
-  source_code {
-    handler = "index.handler"
-    script  = file("${path.module}/canary-homepage.js")
+  code {
+    script = file("${path.module}/canary-homepage.js")
   }
 
   tags = {
