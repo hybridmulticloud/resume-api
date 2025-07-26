@@ -32,6 +32,16 @@ variable "schedule_expression" {
   default     = "rate(10 minutes)"
 }
 
+variable "api_gateway_name" {
+  description = "Name of the API Gateway to reference"
+  type        = string
+}
+
+variable "environment" {
+  description = "Deployment environment name (e.g. dev, prod)"
+  type        = string
+}
+
 variable "homepage_canary_name" {
   description = "Name for the homepage Canary (lowercase/hyphens/underscores)"
   type        = string
