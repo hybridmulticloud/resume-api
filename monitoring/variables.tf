@@ -63,3 +63,14 @@ variable "api_canary_name" {
     error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
 }
+
+variable "api_gateway_name" {
+  description = "Name of the API Gateway to be monitored"
+  type        = string
+}
+
+variable "api_gateway_protocol_type" {
+  description = "Protocol type for the API Gateway (HTTP or WEBSOCKET)"
+  type        = string
+  default     = "HTTP"
+}
