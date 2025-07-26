@@ -1,5 +1,3 @@
-// data-sources.tf
-
 variable "project_name" {
   type    = string
   default = "resume-api"
