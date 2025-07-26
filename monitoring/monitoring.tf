@@ -50,11 +50,17 @@ resource "aws_synthetics_canary" "homepage" {
     expression = "rate(5 minutes)"
   }
 
-  start_canary_after_creation = true
+  run_config {
+    timeout_in_seconds = 60
+  }
 
-  code {
+  source_code {
     handler = "index.handler"
     script  = file("${path.module}/canary-homepage.js")
+  }
+
+  tags = {
+    Name = "Homepage Canary"
   }
 }
 
@@ -68,11 +74,17 @@ resource "aws_synthetics_canary" "api" {
     expression = "rate(5 minutes)"
   }
 
-  start_canary_after_creation = true
+  run_config {
+    timeout_in_seconds = 60
+  }
 
-  code {
+  source_code {
     handler = "index.handler"
     script  = file("${path.module}/canary-api.js")
+  }
+
+  tags = {
+    Name = "API Canary"
   }
 }
 
