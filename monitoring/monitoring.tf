@@ -1,5 +1,4 @@
-// monitoring.tf
-
+# SNS topic for alerts
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-alerts"
 }
@@ -10,6 +9,7 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
+# API Gateway v2 5XX errors
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   alarm_name          = "${var.project_name}-api-5xx"
   namespace           = "AWS/ApiGateway"
@@ -26,6 +26,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
+# Lambda function Errors
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${var.lambda_function_name}-errors"
   namespace           = "AWS/Lambda"
@@ -42,6 +43,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
+# Combined CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-dashboard"
   dashboard_body = jsonencode({
@@ -53,9 +55,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [
-            [ "AWS/ApiGateway", "5XXError", "ApiId", local.api_id ]
-          ]
+          metrics = [[ "AWS/ApiGateway", "5XXError", "ApiId", local.api_id ]]
           region  = var.aws_region
           title   = "API Gateway 5XX Errors"
           stat    = "Sum"
@@ -69,9 +69,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width      = 12
         height     = 6
         properties = {
-          metrics = [
-            [ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]
-          ]
+          metrics = [[ "AWS/Lambda", "Errors", "FunctionName", var.lambda_function_name ]]
           region  = var.aws_region
           title   = "Lambda Function Errors"
           stat    = "Sum"
