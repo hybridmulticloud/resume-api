@@ -8,6 +8,11 @@ jobs:
     name: Import existing IAM Role
     runs-on: ubuntu-latest
 
+    # All "run" steps below will execute in the ./monitoring folder
+    defaults:
+      run:
+        working-directory: ./monitoring
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -22,7 +27,7 @@ jobs:
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            eu-west-2     # update to your region
+          aws-region:            eu-west-2
 
       - name: Terraform Init
         run: terraform init -input=false
