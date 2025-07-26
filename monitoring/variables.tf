@@ -68,3 +68,9 @@ variable "backend_lock_table" {
   description = "DynamoDB table used for backend state locking"
   type        = string
 }
+
+variable "environment" {
+  description = "Deployment environment for naming (e.g. dev, prod)"
+  type        = string
+  default     = "prod"
+}
