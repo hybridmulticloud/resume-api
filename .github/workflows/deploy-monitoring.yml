@@ -12,49 +12,84 @@ jobs:
   monitoring:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    env:
+      AWS_REGION:              ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID:       ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:   ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      DEPLOYMENT_PREFIX:       ${{ secrets.DEPLOYMENT_PREFIX }}
+      API_STAGE_NAME:          prod
+      ALERT_EMAIL:             ${{ secrets.ALERT_EMAIL_ADDRESS }}
+      SCHEDULE_EXPRESSION:     rate(10 minutes)
 
-      - name: Clean Terraform cache
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region:            ${{ env.AWS_REGION }}
+          aws-access-key-id:     ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Discover API Gateway ID
         run: |
+          API_ID=$(aws apigatewayv2 get-apis \
+            --region $AWS_REGION \
+            --query "Items[?Name=='${DEPLOYMENT_PREFIX}-http'].ApiId | [0]" \
+            --output text)
+          echo "TF_VAR_rest_api_name=$API_ID" >> $GITHUB_ENV
+
+      - name: Set API stage
+        run: echo "TF_VAR_api_stage_name=${API_STAGE_NAME}" >> $GITHUB_ENV
+
+      - name: Discover Lambda name
+        run: |
+          LAMBDA=$(aws lambda list-functions \
+            --region $AWS_REGION \
+            --query "Functions[?FunctionName=='${DEPLOYMENT_PREFIX}-lambda'].FunctionName | [0]" \
+            --output text)
+          echo "TF_VAR_lambda_function_name=$LAMBDA" >> $GITHUB_ENV
+
+      - name: Discover CloudFront ID
+        run: |
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Aliases.Items[?=='${DEPLOYMENT_PREFIX}.mydomain.com']].Id | [0]" \
+            --output text)
+          echo "TF_VAR_cloudfront_distribution_id=$DIST_ID" >> $GITHUB_ENV
+
+      - name: Discover S3 bucket
+        run: |
+          BUCKET=$(aws s3api list-buckets \
+            --query "Buckets[?Name=='${DEPLOYMENT_PREFIX}-site'].Name | [0]" \
+            --output text)
+          echo "TF_VAR_site_bucket_name=$BUCKET" >> $GITHUB_ENV
+
+      - name: Configure TF_VARs
+        run: |
+          echo "TF_VAR_alert_email=${ALERT_EMAIL}"                  >> $GITHUB_ENV
+          echo "TF_VAR_schedule_expression=${SCHEDULE_EXPRESSION}"  >> $GITHUB_ENV
+          echo "TF_VAR_homepage_canary_name=${DEPLOYMENT_PREFIX}-homepage-canary" >> $GITHUB_ENV
+          echo "TF_VAR_api_canary_name=${DEPLOYMENT_PREFIX}-api-canary"         >> $GITHUB_ENV
+
+      - run: |
           cd monitoring
           rm -rf .terraform
           rm -f .terraform.lock.hcl
 
-      - name: Set up Terraform CLI
-        uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-region: ${{ secrets.AWS_REGION }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terraform Init
         working-directory: monitoring
         run: terraform init -upgrade
 
-      - name: Terraform Validate & Plan
+      - name: Terraform Validate
         working-directory: monitoring
-        run: |
-          terraform validate
+        run: terraform validate
 
-          terraform plan -out=tfplan \
-            -var="aws_region=${{ secrets.AWS_REGION }}" \
-            -var="rest_api_name=${{ secrets.REST_API_NAME }}" \
-            -var="api_stage_name=${{ secrets.API_STAGE_NAME }}" \
-            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
-            -var="cloudfront_distribution_id=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            -var="site_bucket_name=${{ secrets.SITE_BUCKET_NAME }}" \
-            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
-            -var="canary_execution_role_arn=${{ secrets.CANARY_EXECUTION_ROLE_ARN }}" \
-            -var="schedule_expression=${{ secrets.SCHEDULE_EXPRESSION }}" \
-            -var="homepage_canary_name=${{ secrets.HOMEPAGE_CANARY_NAME }}" \
-            -var="api_canary_name=${{ secrets.API_CANARY_NAME }}"
+      - name: Terraform Plan
+        working-directory: monitoring
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
