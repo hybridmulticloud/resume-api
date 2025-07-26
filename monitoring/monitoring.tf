@@ -41,8 +41,12 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type = "metric"
-        x    = 0; y = 0; width = 12; height = 6
+        type       = "metric"
+        x          = 0
+        y          = 0
+        width      = 12
+        height     = 6
+
         properties = {
           metrics = [
             ["AWS/ApiGateway","5XXError","ApiId", local.api_gateway_id],
@@ -54,8 +58,12 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type = "metric"
-        x    = 12; y = 0; width = 12; height = 6
+        type       = "metric"
+        x          = 12
+        y          = 0
+        width      = 12
+        height     = 6
+
         properties = {
           metrics = [
             ["AWS/Lambda","Errors","FunctionName", local.lambda_function_name],
