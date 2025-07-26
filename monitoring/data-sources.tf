@@ -15,7 +15,10 @@ data "terraform_remote_state" "infra" {
 # Update each key to the exact name you declared in infra/outputs.tf.
 locals {
   api_url             = data.terraform_remote_state.infra.outputs.api_gateway_url
+  api_gateway_id        = data.terraform_remote_state.infra.outputs.api_gateway_id
   lambda_function_arn = data.terraform_remote_state.infra.outputs.lambda_function_arn
+  lambda_function_name  = var.lambda_function_name
+  
   dynamodb_table_name = data.terraform_remote_state.infra.outputs.dynamodb_table_name
   website_bucket_name = data.terraform_remote_state.infra.outputs.website_bucket_name
 }
