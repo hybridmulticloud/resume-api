@@ -9,6 +9,7 @@ on:
 env:
   AWS_REGION:         ${{ secrets.AWS_REGION }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+  TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
 
 jobs:
   monitoring:
