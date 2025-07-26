@@ -14,7 +14,9 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
-  lifecycle { prevent_destroy = true }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -29,7 +31,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   statistic           = "Sum"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
-  lifecycle { prevent_destroy = true }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_cloudwatch_dashboard" "main" {
@@ -71,5 +75,7 @@ resource "aws_cloudwatch_dashboard" "main" {
     ]
   })
 
-  lifecycle { prevent_destroy = true }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
