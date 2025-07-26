@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Base name for all resources (matches infra defaults)"
+  description = "Base name for all infra resources (matches infra default)"
   type        = string
   default     = "resume-api"
 }
@@ -8,6 +8,18 @@ variable "aws_region" {
   description = "AWS region to deploy resources into"
   type        = string
   default     = "us-east-1"
+}
+
+variable "frontend_domain" {
+  description = "Custom domain for your SPA (CNAME on CloudFront & bucket name)"
+  type        = string
+  default     = "hybridmulti.cloud"
+}
+
+variable "lambda_function_name" {
+  description = "Name of the existing Lambda function backing your API"
+  type        = string
+  default     = "UpdateVisitorCount"
 }
 
 variable "alert_email" {
@@ -21,7 +33,7 @@ variable "alert_email" {
 }
 
 variable "schedule_expression" {
-  description = "Frequency for the Synthetics canaries"
+  description = "How often to run the Synthetics canaries"
   type        = string
   default     = "rate(10 minutes)"
 }
@@ -33,7 +45,7 @@ variable "homepage_canary_name" {
 
   validation {
     condition     = can(regex("^[a-z0-9_-]+$", var.homepage_canary_name))
-    error_message = "homepage_canary_name must be lowercase alphanumeric, hyphens, or underscores only"
+    error_message = "homepage_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
 }
 
@@ -44,6 +56,6 @@ variable "api_canary_name" {
 
   validation {
     condition     = can(regex("^[a-z0-9_-]+$", var.api_canary_name))
-    error_message = "api_canary_name must be lowercase alphanumeric, hyphens, or underscores only"
+    error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
 }
