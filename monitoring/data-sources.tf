@@ -2,11 +2,6 @@ data "aws_api_gateway_rest_api" "api" {
   name = var.rest_api_name
 }
 
-data "aws_api_gateway_stage" "api_stage" {
-  rest_api_id = data.aws_api_gateway_rest_api.api.id
-  stage_name  = var.api_stage_name
-}
-
 data "aws_lambda_function" "api_fn" {
   function_name = var.lambda_function_name
 }
