@@ -1,27 +1,26 @@
-name: Deploy Monitoring & Canaries
+name: Deploy Monitoring
 
 on:
   push:
     paths:
-      - monitoring/**
-      - .github/workflows/deploy-monitoring.yml
+      - 'monitoring/**'
   schedule:
     - cron: '0 * * * *'
 
 jobs:
-  deploy-monitoring:
+  monitoring:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Clean up stale Terraform cache
+      - name: Clean Terraform cache
         run: |
-          rm -rf monitoring/.terraform
-          rm -f monitoring/.terraform.lock.hcl
+          cd monitoring
+          rm -rf .terraform .terraform.lock.hcl
 
-      - name: Set up Terraform CLI
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
@@ -37,19 +36,24 @@ jobs:
         working-directory: monitoring
         run: terraform init -upgrade
 
-      - name: Terraform Validate
-        working-directory: monitoring
-        run: terraform validate
-
-      - name: Terraform Apply
+      - name: Terraform Validate & Plan
         working-directory: monitoring
         run: |
-          terraform apply -auto-approve \
+          terraform validate
+          terraform plan -out=tfplan \
             -var="aws_region=${{ secrets.AWS_REGION }}" \
-            -var="rest_api_id=${{ secrets.REST_API_ID }}" \
+            -var="rest_api_name=${{ secrets.REST_API_NAME }}" \
             -var="api_stage_name=${{ secrets.API_STAGE_NAME }}" \
-            -var="lambda_function_name=${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            -var="lambda_function_name=${{ secrets.LAMBDA_FN_NAME }}" \
+            -var="cloudfront_distribution_id=${{ secrets.CF_DIST_ID }}" \
+            -var="site_bucket_name=${{ secrets.SITE_BUCKET }}" \
             -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
-            -var="canary_artifact_bucket=${{ secrets.CANARY_ARTIFACT_BUCKET }}" \
-            -var="canary_execution_role_arn=${{ secrets.CANARY_EXECUTION_ROLE_ARN }}" \
-            -var="cloudfront_domain_name=${{ secrets.CLOUDFRONT_DOMAIN_NAME }}"
+            -var="canary_execution_role_arn=${{ secrets.CANARY_ROLE_ARN }}" \
+            -var="schedule_expression=${{ secrets.SCHEDULE_EXPR }}" \
+            -var="homepage_canary_name=HomepageCanary" \
+            -var="api_canary_name=ApiCanary"
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        working-directory: monitoring
+        run: terraform apply -auto-approve tfplan
