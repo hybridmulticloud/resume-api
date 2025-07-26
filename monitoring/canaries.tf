@@ -7,12 +7,10 @@ resource "random_id" "suffix" {
 data "aws_iam_policy_document" "canary_assume" {
   statement {
     effect = "Allow"
-
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
     }
-
     actions = ["sts:AssumeRole"]
   }
 }
@@ -23,19 +21,17 @@ resource "aws_iam_role" "canary_role" {
   assume_role_policy = data.aws_iam_policy_document.canary_assume.json
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy       = true
     create_before_destroy = false
-    ignore_changes  = [assume_role_policy]
+    ignore_changes        = [assume_role_policy]
   }
 }
 
-# Attach the AWSLambdaBasicExecutionRole managed policy
+# Attach AWS-managed policies
 resource "aws_iam_role_policy_attachment" "basic" {
   role       = aws_iam_role.canary_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
-
-# Attach the Synthetics full-access policy
 resource "aws_iam_role_policy_attachment" "synthetics" {
   role       = aws_iam_role.canary_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
@@ -50,3 +46,5 @@ resource "aws_s3_bucket" "artifacts" {
     prevent_destroy = true
   }
 }
+
+# (Remove any aws_s3_bucket_acl blocks—new buckets enforce “owner-only” by default.)
