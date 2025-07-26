@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
 env:
-  TF_VAR_alert_email:   ${{ secrets.ALERT_EMAIL_ADDRESS }}
-  TF_VAR_project_name:  ${{ secrets.PROJECT_NAME }}
-  TF_VAR_aws_region:    ${{ secrets.AWS_REGION }}
+  TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+  TF_VAR_aws_region:   ${{ secrets.AWS_REGION }}
 
 jobs:
   import-role:
@@ -15,40 +15,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure Terraform Cloud creds
-        run: |
-          mkdir -p ~/.terraform.d
-          cat > ~/.terraform.d/credentials.tfrc.json <<EOF
-          {
-            "credentials": {
-              "app.terraform.io": {
-                "token": "${{ secrets.TF_API_TOKEN }}"
-              }
-            }
-          }
-          EOF
-
       - name: Configure AWS creds
         uses: aws-actions/configure-aws-credentials@v2
         with:
+          aws-region:            ${{ secrets.AWS_REGION }}
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ secrets.AWS_REGION }}
 
-      - uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Terraform Init & Validate
+      - name: Terraform Init (with reconfigure)
         working-directory: monitoring
-        run: |
-          terraform init -input=false
-          terraform validate -no-color
+        run: terraform init -input=false -reconfigure
 
-      - name: Import existing IAM Role
+      - name: Terraform Validate
+        working-directory: monitoring
+        run: terraform validate -no-color
+
+      - name: Import IAM Role into Remote State
         working-directory: monitoring
         run: terraform import aws_iam_role.canary_role resume-monitoring-canary-role
 
-      - name: Plan post-import
+      - name: Terraform Plan (post-import)
         working-directory: monitoring
         run: terraform plan -input=false -no-color
