@@ -56,3 +56,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "role_name" {
+  description = "Name of the canary IAM role"
+  type        = string
+  default     = "resume-monitoring-canary-role"
+}
