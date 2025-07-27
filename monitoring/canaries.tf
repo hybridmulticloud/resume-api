@@ -1,3 +1,15 @@
+data "archive_file" "api_canary" {
+  type        = "zip"
+  source_dir  = "${path.module}/canaries/api"
+  output_path = "${path.module}/canaries/api.zip"
+}
+
+data "archive_file" "homepage_canary" {
+  type        = "zip"
+  source_dir  = "${path.module}/canaries/homepage"
+  output_path = "${path.module}/canaries/homepage.zip"
+}
+
 resource "aws_synthetics_canary" "api" {
   name                 = var.api_canary_name
   execution_role_arn   = local.canary_role_arn
