@@ -22,8 +22,3 @@ locals {
   cloudfront_oac_id          = data.terraform_remote_state.infra.outputs.cloudfront_oac_id
   route53_zone_id            = data.terraform_remote_state.infra.outputs.route53_zone_id
 }
-
-locals {
-  canary_role_name = var.role_name
-  canary_role_arn  = data.external.canary_role_lookup.result.arn
-}
