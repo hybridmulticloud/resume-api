@@ -2,9 +2,7 @@ data "terraform_remote_state" "infra" {
   backend = "remote"
   config = {
     organization = "hybridmulticloud"
-    workspaces = {
-      name = "resume-api-backend"
-    }
+    workspaces = { name = "resume-api-backend" }
   }
 }
 
@@ -27,13 +25,11 @@ locals {
 }
 
 data "archive_file" "api_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/api"
-  output_path = "${path.module}/canaries/api.zip"
+  type       = "zip"
+  source_dir = "${path.module}/canaries/api"
 }
 
 data "archive_file" "homepage_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/homepage"
-  output_path = "${path.module}/canaries/homepage.zip"
+  type       = "zip"
+  source_dir = "${path.module}/canaries/homepage"
 }
