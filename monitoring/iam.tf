@@ -11,6 +11,10 @@ data "aws_iam_policy_document" "assume_synthetics" {
 resource "aws_iam_role" "canary_role" {
   name               = "resume-monitoring-canary-role"
   assume_role_policy = data.aws_iam_policy_document.assume_synthetics.json
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 data "aws_iam_policy_document" "canary_policy" {
