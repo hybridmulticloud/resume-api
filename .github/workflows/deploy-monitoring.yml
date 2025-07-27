@@ -17,6 +17,7 @@ env:
 jobs:
   monitoring:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -32,6 +33,9 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
+
+      - name: Prepare cache directory for canaries
+        run: mkdir -p monitoring/.terraform/cache
 
       - name: Terraform Init
         working-directory: monitoring
