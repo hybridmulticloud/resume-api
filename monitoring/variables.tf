@@ -50,3 +50,9 @@ variable "api_canary_name" {
     error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
   }
 }
+
+variable "tags" {
+  description = "Map of tags to apply to all synthetics canaries"
+  type        = map(string)
+  default     = {}
+}
