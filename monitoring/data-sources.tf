@@ -22,15 +22,3 @@ locals {
   cloudfront_oac_id          = data.terraform_remote_state.infra.outputs.cloudfront_oac_id
   route53_zone_id            = data.terraform_remote_state.infra.outputs.route53_zone_id
 }
-
-data "archive_file" "api_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/api"
-  output_path = "${path.module}/canaries/api.zip"
-}
-
-data "archive_file" "homepage_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/homepage"
-  output_path = "${path.module}/canaries/homepage.zip"
-}
