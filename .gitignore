@@ -6,3 +6,4 @@ __pycache__/
 terraform.tfvars
 .aws/
 .env
+monitoring/.terraform/cache
