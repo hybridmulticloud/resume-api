@@ -51,7 +51,7 @@ jobs:
           ls -la monitoring/.terraform/cache
 
       - name: Upload cache directory artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-cache
           path: monitoring/.terraform/cache
