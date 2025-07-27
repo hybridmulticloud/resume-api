@@ -14,12 +14,12 @@ resource "aws_synthetics_canary" "api" {
   name                 = var.api_canary_name
   execution_role_arn   = local.canary_role_arn
   runtime_version      = "syn-nodejs-puppeteer-3.6"
-  handler              = "index.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
 
-  zip_file = filebase64(
-    data.archive_file.api_canary.output_path
-  )
+  code {
+    handler  = "index.handler"
+    zip_file = filebase64(data.archive_file.api_canary.output_path)
+  }
 
   schedule {
     expression = var.schedule_expression
@@ -36,12 +36,12 @@ resource "aws_synthetics_canary" "homepage" {
   name                 = var.homepage_canary_name
   execution_role_arn   = local.canary_role_arn
   runtime_version      = "syn-python-selenium-1.0"
-  handler              = "pageLoadBlueprint.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
 
-  zip_file = filebase64(
-    data.archive_file.homepage_canary.output_path
-  )
+  code {
+    handler  = "pageLoadBlueprint.handler"
+    zip_file = filebase64(data.archive_file.homepage_canary.output_path)
+  }
 
   schedule {
     expression = var.schedule_expression
