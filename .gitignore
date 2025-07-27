@@ -7,3 +7,5 @@ terraform.tfvars
 .aws/
 .env
 monitoring/.terraform/cache
+/monitoring/canaries/api.zip
+/monitoring/canaries/homepage.zip
