@@ -1,28 +1,3 @@
-data "aws_iam_policy_document" "canary_assume" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["synthetics.amazonaws.com"]
-    }
-
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-data "archive_file" "api_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/api"
-  output_path = "${path.module}/canaries/api.zip"
-}
-
-data "archive_file" "homepage_canary" {
-  type        = "zip"
-  source_dir  = "${path.module}/canaries/homepage"
-  output_path = "${path.module}/canaries/homepage.zip"
-}
-
 resource "aws_synthetics_canary" "api" {
   name                 = var.api_canary_name
   execution_role_arn   = aws_iam_role.canary_role.arn
@@ -53,4 +28,9 @@ resource "aws_synthetics_canary" "homepage" {
     prevent_destroy = true
   }
   tags = var.tags
+}
+
+resource "aws_iam_role_policy" "canary_policy" {
+  role   = local.canary_role_name
+  policy = data.aws_iam_policy_document.canary_policy.json
 }
