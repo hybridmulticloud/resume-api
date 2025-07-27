@@ -1,15 +1,13 @@
-# monitoring/canaries.tf
-
 data "archive_file" "api_canary" {
   type        = "zip"
   source_dir  = "${path.module}/canaries/api"
-  output_path = "${path.module}/.terraform/cache/api_canary.zip"
+  output_path = "${path.module}/canaries/api.zip"
 }
 
 data "archive_file" "homepage_canary" {
   type        = "zip"
   source_dir  = "${path.module}/canaries/homepage"
-  output_path = "${path.module}/.terraform/cache/homepage_canary.zip"
+  output_path = "${path.module}/canaries/homepage.zip"
 }
 
 resource "aws_synthetics_canary" "api" {
@@ -19,7 +17,7 @@ resource "aws_synthetics_canary" "api" {
   handler              = "index.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
 
-  zip_file = filebase64("${path.module}/.terraform/cache/api_canary.zip")
+  zip_file = filebase64("${path.module}/canaries/api.zip")
 
   schedule {
     expression = var.schedule_expression
@@ -39,7 +37,7 @@ resource "aws_synthetics_canary" "homepage" {
   handler              = "pageLoadBlueprint.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
 
-  zip_file = filebase64("${path.module}/.terraform/cache/homepage_canary.zip")
+  zip_file = filebase64("${path.module}/canaries/homepage.zip")
 
   schedule {
     expression = var.schedule_expression
