@@ -1,18 +1,3 @@
-terraform {
-  required_providers {
-    archive = {
-      source  = "hashicorp/archive"
-      version = ">= 2.1.0"
-    }
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 4.0.0"
-    }
-  }
-}
-
-provider "archive" {}
-
 data "archive_file" "api_canary" {
   type        = "zip"
   source_dir  = "${path.module}/canaries/api"
