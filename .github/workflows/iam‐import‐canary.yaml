@@ -1,17 +1,19 @@
-name: Import Canary IAM Role
-on: workflow_dispatch
+name: Debug Import Canary Role
+on:
+  workflow_dispatch:
 
 env:
-  TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
-  TF_VAR_aws_region:   ${{ secrets.AWS_REGION }}
-  TF_VAR_alert_email:  ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_project_name:       ${{ secrets.PROJECT_NAME }}
+  TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
+  TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
 
 jobs:
-  import-role:
+  debug-import:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -21,17 +23,77 @@ jobs:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI + Login
-        uses: hashicorp/setup-terraform@v1
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version:               "1.5.7"
-          cli_config_credentials_hostname: "app.terraform.io"
-          cli_config_credentials_token:    ${{ secrets.TF_API_TOKEN }}
+          terraform_version: "1.5.7"
 
-      - name: Init → Import → Plan
+      - name: Debug environment & home directory
+        run: |
+          echo "HOME            = $HOME"
+          echo "TF_CLI_CONFIG   = ${TF_CLI_CONFIG_FILE:-not set}"
+          echo "TF_TOKEN (env)  = ${TF_TOKEN_app_terraform_io:+set}"
+          echo "All TF_ vars:"
+          env | grep '^TF_'
+          echo "Listing workspace root:"
+          ls -al $GITHUB_WORKSPACE
+
+      - name: Write credentials.tfrc.json
+        run: |
+          mkdir -p ~/.terraform.d
+          cat <<EOF > ~/.terraform.d/credentials.tfrc.json
+{"credentials":{"app.terraform.io":{"token":"${TF_TOKEN_app_terraform_io}"}}}
+EOF
+          echo "--- ~/.terraform.d/credentials.tfrc.json ---"
+          cat ~/.terraform.d/credentials.tfrc.json
+          ls -al ~/.terraform.d
+
+      - name: Init (remote backend) with detailed logs
         working-directory: monitoring
         run: |
-          terraform init -input=false -reconfigure -no-color
-          terraform validate -no-color
-          terraform import aws_iam_role.canary_role resume-monitoring-canary-role
-          terraform plan -input=false -no-color
+          TF_LOG=TRACE terraform init \
+            -input=false \
+            -reconfigure \
+            -no-color \
+            |& tee tf-init-remote.log || true
+          echo "---- Errors/Creds in tf-init-remote.log ----"
+          grep -E "Error|credentials" tf-init-remote.log || true
+          tail -n 30 tf-init-remote.log
+
+      - name: Attempt remote import with trace
+        working-directory: monitoring
+        run: |
+          TF_LOG=TRACE terraform import \
+            aws_iam_role.canary_role \
+            resume-monitoring-canary-role \
+            2>&1 | tee tf-import-remote.log || true
+          echo "---- Import output ----"
+          grep -E "Error|token" tf-import-remote.log || true
+
+      - name: Fallback: Init without backend
+        working-directory: monitoring
+        run: |
+          TF_LOG=DEBUG terraform init \
+            -backend=false \
+            -no-color \
+            |& tee tf-init-local.log
+          tail -n 20 tf-init-local.log
+
+      - name: Fallback: Import locally
+        working-directory: monitoring
+        run: |
+          TF_LOG=DEBUG terraform import \
+            aws_iam_role.canary_role \
+            resume-monitoring-canary-role \
+            2>&1 | tee tf-import-local.log
+          tail -n 20 tf-import-local.log
+
+      - name: Push local state back to remote
+        working-directory: monitoring
+        run: |
+          terraform init -reconfigure -no-color
+          terraform state push terraform.tfstate
+
+      - name: Final plan
+        working-directory: monitoring
+        run: terraform plan -input=false -no-color
