@@ -14,33 +14,35 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Configure AWS creds
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region:            ${{ secrets.AWS_REGION }}
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI v1.5.7
+      - name: Setup Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Authenticate to Terraform Cloud
+      - name: Write Terraform RC
+        # Force Terraform to read this file for Cloud creds
         env:
-          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+          TF_CLI_CONFIG_FILE: ${{ github.workspace }}/.terraformrc
         run: |
-          # this writes ~/.terraform.d/credentials.tfrc.json for you
-          terraform login -no-color -token="$TF_API_TOKEN"
-          # sanity-check
-          echo ">>> ~/.terraform.d/credentials.tfrc.json <<<"
-          sed -n '1,20p' ~/.terraform.d/credentials.tfrc.json
+          cat > $TF_CLI_CONFIG_FILE <<EOF
+          credentials "app.terraform.io" {
+            token = "${{ secrets.TF_API_TOKEN }}"
+          }
+          EOF
+          echo "---- .terraformrc ----"
+          cat $TF_CLI_CONFIG_FILE
 
-      - name: Init, Import & Plan in one shell
+      - name: Init, Import & Plan
         working-directory: monitoring
         env:
-          # double ensure TF sees your token
-          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+          TF_CLI_CONFIG_FILE: ${{ github.workspace }}/.terraformrc
         run: |
           terraform init -no-color -reconfigure
           terraform validate -no-color
