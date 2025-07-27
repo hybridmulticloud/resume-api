@@ -1,36 +1,37 @@
 resource "aws_synthetics_canary" "api" {
   name                 = var.api_canary_name
-  execution_role_arn   = aws_iam_role.canary_role.arn
+  execution_role_arn   = local.canary_role_arn
   runtime_version      = "syn-nodejs-puppeteer-3.6"
   handler              = "index.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
   zip_file             = filebase64(data.archive_file.api_canary.output_path)
+
   schedule {
     expression = var.schedule_expression
   }
+
   lifecycle {
     prevent_destroy = true
   }
+
   tags = var.tags
 }
 
 resource "aws_synthetics_canary" "homepage" {
   name                 = var.homepage_canary_name
-  execution_role_arn   = aws_iam_role.canary_role.arn
+  execution_role_arn   = local.canary_role_arn
   runtime_version      = "syn-python-selenium-1.0"
   handler              = "pageLoadBlueprint.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
   zip_file             = filebase64(data.archive_file.homepage_canary.output_path)
+
   schedule {
     expression = var.schedule_expression
   }
+
   lifecycle {
     prevent_destroy = true
   }
-  tags = var.tags
-}
 
-resource "aws_iam_role_policy" "canary_policy" {
-  role   = local.canary_role_name
-  policy = data.aws_iam_policy_document.canary_policy.json
+  tags = var.tags
 }
