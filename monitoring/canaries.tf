@@ -17,7 +17,9 @@ resource "aws_synthetics_canary" "api" {
   handler              = "index.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/api"
 
-  zip_file = data.archive_file.api_canary.output_base64
+  zip_file = filebase64(
+    data.archive_file.api_canary.output_path
+  )
 
   schedule {
     expression = var.schedule_expression
@@ -37,7 +39,9 @@ resource "aws_synthetics_canary" "homepage" {
   handler              = "pageLoadBlueprint.handler"
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.bucket}/homepage"
 
-  zip_file = data.archive_file.homepage_canary.output_base64
+  zip_file = filebase64(
+    data.archive_file.homepage_canary.output_path
+  )
 
   schedule {
     expression = var.schedule_expression
