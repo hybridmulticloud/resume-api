@@ -21,30 +21,17 @@ jobs:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI
-        uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform CLI + Login
+        uses: hashicorp/setup-terraform@v1
         with:
-          terraform_version: "1.5.7"
+          terraform_version:               "1.5.7"
+          cli_config_credentials_hostname: "app.terraform.io"
+          cli_config_credentials_token:    ${{ secrets.TF_API_TOKEN }}
 
-      - name: Write Terraform RC
-        # Force Terraform to read this file for Cloud creds
-        env:
-          TF_CLI_CONFIG_FILE: ${{ github.workspace }}/.terraformrc
-        run: |
-          cat > $TF_CLI_CONFIG_FILE <<EOF
-          credentials "app.terraform.io" {
-            token = "${{ secrets.TF_API_TOKEN }}"
-          }
-          EOF
-          echo "---- .terraformrc ----"
-          cat $TF_CLI_CONFIG_FILE
-
-      - name: Init, Import & Plan
+      - name: Init → Import → Plan
         working-directory: monitoring
-        env:
-          TF_CLI_CONFIG_FILE: ${{ github.workspace }}/.terraformrc
         run: |
-          terraform init -no-color -reconfigure
+          terraform init -input=false -reconfigure -no-color
           terraform validate -no-color
           terraform import aws_iam_role.canary_role resume-monitoring-canary-role
-          terraform plan -no-color -input=false
+          terraform plan -input=false -no-color
