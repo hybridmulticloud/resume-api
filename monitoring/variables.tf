@@ -31,23 +31,23 @@ variable "schedule_expression" {
   default     = "rate(10 minutes)"
 }
 
-variable "homepage_canary_name" {
-  description = "Canary name for homepage"
-  type        = string
-  default     = "resume-homepage-canary"
-  validation {
-    condition     = can(regex("^[a-z0-9_-]+$", var.homepage_canary_name))
-    error_message = "homepage_canary_name must be lowercase alphanumeric, hyphens or underscores only"
-  }
-}
-
 variable "api_canary_name" {
-  description = "Canary name for API"
+  description = "Canary name for API (1–21 chars: lowercase, digits, hyphens, underscores)"
   type        = string
   default     = "resume-api-canary"
   validation {
-    condition     = can(regex("^[a-z0-9_-]+$", var.api_canary_name))
-    error_message = "api_canary_name must be lowercase alphanumeric, hyphens or underscores only"
+    condition     = can(regex("^[a-z0-9_-]{1,21}$", var.api_canary_name))
+    error_message = "api_canary_name must be 1–21 chars, lowercase alphanumeric, hyphens or underscores"
+  }
+}
+
+variable "homepage_canary_name" {
+  description = "Canary name for Homepage (1–21 chars: lowercase, digits, hyphens, underscores)"
+  type        = string
+  default     = "resume-home-canary"
+  validation {
+    condition     = can(regex("^[a-z0-9_-]{1,21}$", var.homepage_canary_name))
+    error_message = "homepage_canary_name must be 1–21 chars, lowercase alphanumeric, hyphens or underscores"
   }
 }
 
