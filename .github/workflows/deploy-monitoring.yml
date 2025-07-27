@@ -37,25 +37,25 @@ jobs:
       - name: Prepare cache directory for canaries
         run: mkdir -p monitoring/.terraform/cache
 
-      - name: Verify cache directory exists
-        run: |
-          echo "Contents of monitoring/.terraform/cache:"
-          ls -la monitoring/.terraform/cache || echo "🚫 Directory not found!"
-
-      - name: Upload cache directory artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-cache
-          path: monitoring/.terraform/cache
-
       - name: Terraform Init
         working-directory: monitoring
         run: terraform init -upgrade
 
-      - name: Terraform Validate
+      - name: Terraform Plan
         working-directory: monitoring
-        run: terraform validate
+        run: terraform plan -out=tfplan
+
+      - name: Verify cache directory after plan
+        run: |
+          echo "Contents of monitoring/.terraform/cache:"
+          ls -la monitoring/.terraform/cache
+
+      - name: Upload cache directory artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-cache
+          path: monitoring/.terraform/cache
 
       - name: Terraform Apply
         working-directory: monitoring
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve tfplan
