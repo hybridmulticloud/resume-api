@@ -29,3 +29,28 @@ locals {
   cloudfront_oac_id          = data.terraform_remote_state.infra.outputs.cloudfront_oac_id
   route53_zone_id            = data.terraform_remote_state.infra.outputs.route53_zone_id
 }
+
+data "aws_iam_policy_document" "canary_assume" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["synthetics.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+data "archive_file" "api_canary" {
+  type        = "zip"
+  source_dir  = "${path.module}/canaries/api"
+  output_path = "${path.module}/canaries/api.zip"
+}
+
+data "archive_file" "homepage_canary" {
+  type        = "zip"
+  source_dir  = "${path.module}/canaries/homepage"
+  output_path = "${path.module}/canaries/homepage.zip"
+}
