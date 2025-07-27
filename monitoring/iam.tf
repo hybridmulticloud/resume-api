@@ -1,6 +1,6 @@
 data "aws_iam_policy_document" "assume_synthetics" {
   statement {
-    actions    = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRole"]
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
@@ -8,18 +8,26 @@ data "aws_iam_policy_document" "assume_synthetics" {
   }
 }
 
-data "aws_iam_role" "existing_canary_role" {
-  name = "resume-monitoring-canary-role"
+data "external" "canary_role_lookup" {
+  program = [
+    "bash", "-c",
+    <<-EOC
+      aws iam get-role \
+        --role-name ${var.role_name} \
+        --query '{role_name:Role.RoleName, arn:Role.Arn}' \
+        --output json 2>/dev/null || echo '{\"role_name\": \"\"}'
+    EOC
+  ]
+}
 
-  lifecycle {
-    ignore_errors = true
-  }
+locals {
+  role_exists = length(data.external.canary_role_lookup.result.role_name) > 0
 }
 
 resource "aws_iam_role" "canary_role" {
-  count               = data.aws_iam_role.existing_canary_role.id != "" ? 0 : 1
-  name                = "resume-monitoring-canary-role"
-  assume_role_policy  = data.aws_iam_policy_document.assume_synthetics.json
+  count              = local.role_exists ? 0 : 1
+  name               = var.role_name
+  assume_role_policy = data.aws_iam_policy_document.assume_synthetics.json
 
   lifecycle {
     prevent_destroy = true
@@ -27,13 +35,13 @@ resource "aws_iam_role" "canary_role" {
 }
 
 locals {
-  canary_role_arn  = length(aws_iam_role.canary_role) == 1
-    ? aws_iam_role.canary_role[0].arn
-    : data.aws_iam_role.existing_canary_role.arn
+  canary_role_name = local.role_exists
+    ? data.external.canary_role_lookup.result.role_name
+    : aws_iam_role.canary_role[0].name
 
-  canary_role_name = length(aws_iam_role.canary_role) == 1
-    ? aws_iam_role.canary_role[0].name
-    : data.aws_iam_role.existing_canary_role.name
+  canary_role_arn = local.role_exists
+    ? data.external.canary_role_lookup.result.arn
+    : aws_iam_role.canary_role[0].arn
 }
 
 data "aws_iam_policy_document" "canary_policy" {
@@ -48,9 +56,4 @@ data "aws_iam_policy_document" "canary_policy" {
     ]
     resources = ["*"]
   }
-}
-
-resource "aws_iam_role_policy" "canary_policy" {
-  role   = local.canary_role_name
-  policy = data.aws_iam_policy_document.canary_policy.json
 }
