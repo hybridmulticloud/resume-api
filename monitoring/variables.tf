@@ -11,13 +11,13 @@ variable "aws_region" {
 }
 
 variable "schedule_expression" {
-  description = "CloudWatch schedule (rate or cron)"
+  description = "Cron or rate() expression for canary schedules"
   type        = string
   default     = "rate(5 minutes)"
 }
 
 variable "additional_tags" {
-  description = "Extra tags to merge with the default ones"
+  description = "Extra tags to merge"
   type        = map(string)
   default     = {}
 }
