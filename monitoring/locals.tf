@@ -1,8 +1,8 @@
-data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "me" {}
 
 locals {
   prefix               = var.project_name
-  bucket_name          = "${local.prefix}-${data.aws_caller_identity.current.account_id}-canary-artifacts"
+  bucket_name          = "${local.prefix}-${data.aws_caller_identity.me.account_id}-canary-artifacts"
   bucket_arn           = "arn:aws:s3:::${local.bucket_name}"
   bucket_arn_all       = "${local.bucket_arn}/*"
 
