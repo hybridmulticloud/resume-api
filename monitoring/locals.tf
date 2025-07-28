@@ -1,15 +1,17 @@
-locals {
-  # Base names
-  api_canary_name      = "${var.project_name}-api-canary"
-  homepage_canary_name = "${var.project_name}-homepage-canary"
-  bucket_name          = "${var.project_name}-canary-artifacts"
+data "aws_caller_identity" "current" {}
 
-  # Tags
-  tags = merge(
-    {
-      Project     = var.project_name
-      Environment = "production"
-    },
-    var.additional_tags
-  )
+locals {
+  prefix           = var.project_name
+  bucket_name      = "${local.prefix}-canary-artifacts"
+  bucket_arn       = "arn:aws:s3:::${local.bucket_name}"
+  bucket_arn_all   = "${local.bucket_arn}/*"
+  tags             = merge(
+                       { Project = var.project_name, Environment = "production" },
+                       var.additional_tags,
+                     )
+  create_bucket    = lookup(
+                       data.external.bucket_exists.result, 
+                       "exists", 
+                       "false"
+                     ) == "false"
 }
