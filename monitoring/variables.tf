@@ -1,6 +1,7 @@
 variable "project_name" {
   description = "Base name for all resources"
   type        = string
+  default     = "resume-api"
 }
 
 variable "aws_region" {
