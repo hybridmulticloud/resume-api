@@ -16,7 +16,7 @@ terraform {
     organization = "hybridmulticloud"
 
     workspaces {
-      name = "resume-api-backend"
+      name = "resume-api-backend-monitoring"
     }
   }
 }
