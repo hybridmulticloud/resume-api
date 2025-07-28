@@ -37,12 +37,10 @@ jobs:
 
       - name: Terraform Init
         working-directory: monitoring
-        run: terraform init -upgrade
+        run: terraform init
 
-      - name: Terraform Plan
+      - name: Terraform Plan & Apply
         working-directory: monitoring
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: monitoring
-        run: terraform apply -input=false tfplan
+        run: |
+          terraform plan
+          terraform apply -auto-approve
