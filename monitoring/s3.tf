@@ -1,11 +1,6 @@
 resource "aws_s3_bucket" "canary_artifacts" {
   bucket = local.bucket_name
   tags   = local.tags
-
-  # supported in AWS provider v5.x+
-  create_bucket_configuration {
-    location_constraint = var.aws_region
-  }
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
