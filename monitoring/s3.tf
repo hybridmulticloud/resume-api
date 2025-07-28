@@ -1,16 +1,17 @@
 resource "aws_s3_bucket" "canary_artifacts" {
-  # use the us-east-1 provider so we don't need a location block
-  provider = aws.use1
+  provider = aws.use1   # if you need us-east-1; otherwise omit
+  bucket   = local.bucket_name
+  tags     = local.tags
 
-  bucket = local.bucket_name
-  tags   = local.tags
+  # if your provider is already in the right region, you can omit this block
+  create_bucket_configuration {
+    location_constraint = var.aws_region
+  }
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
-  # must manage versioning in the same region as the bucket
-  provider = aws.use1
-
-  bucket = aws_s3_bucket.canary_artifacts.id
+  provider = aws.use1   # or default aws
+  bucket   = aws_s3_bucket.canary_artifacts.id
 
   versioning_configuration {
     status = "Enabled"
@@ -18,10 +19,8 @@ resource "aws_s3_bucket_versioning" "versioning" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "sse" {
-  # likewise for SSE
-  provider = aws.use1
-
-  bucket = aws_s3_bucket.canary_artifacts.id
+  provider = aws.use1   # or default aws
+  bucket   = aws_s3_bucket.canary_artifacts.id
 
   rule {
     apply_server_side_encryption_by_default {
