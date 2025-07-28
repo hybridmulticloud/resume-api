@@ -1,4 +1,3 @@
-# Trust policy for Synthetics
 data "aws_iam_policy_document" "canary_assume" {
   statement {
     effect = "Allow"
@@ -10,20 +9,17 @@ data "aws_iam_policy_document" "canary_assume" {
   }
 }
 
-# Canary execution role
 resource "aws_iam_role" "canary" {
   name               = "${var.project_name}-canary-role"
   assume_role_policy = data.aws_iam_policy_document.canary_assume.json
-  tags               = var.tags
+  tags               = local.tags
 }
 
-# Attach AWS-managed Synthetics policy
 resource "aws_iam_role_policy_attachment" "synthetics_core" {
   role       = aws_iam_role.canary.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
-# S3 access for code & artifacts
 data "aws_iam_policy_document" "canary_s3" {
   statement {
     effect = "Allow"
