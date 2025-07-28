@@ -1,6 +1,6 @@
 data "aws_iam_policy_document" "canary_assume" {
   statement {
-    effect = "Allow"
+    effect    = "Allow"
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
@@ -23,7 +23,7 @@ resource "aws_iam_role_policy_attachment" "synthetics_core" {
 data "aws_iam_policy_document" "canary_s3" {
   statement {
     effect    = "Allow"
-    actions   = ["s3:ListBucket", "s3:GetBucketAcl", "s3:GetBucketLocation"]
+    actions   = ["s3:ListBucket", "s3:GetBucketLocation"]
     resources = [ local.bucket_arn ]
   }
   statement {
