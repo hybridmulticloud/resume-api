@@ -1,33 +1,27 @@
-data "external" "bucket_exists" {
-  program = ["bash", "-c", <<-EOF
-    if aws s3api head-bucket --bucket ${local.bucket_name} 2>/dev/null; then
-      echo '{"exists":"true"}'
-    else
-      echo '{"exists":"false"}'
-    fi
-EOF
-  ]
-}
-
-locals {
-  create_bucket = data.external.bucket_exists.result.exists == "false"
-}
-
+# Main artifacts bucket
 resource "aws_s3_bucket" "canary_artifacts" {
-  count  = local.create_bucket ? 1 : 0
   bucket = local.bucket_name
   tags   = local.tags
+
+  # Ensure bucket is created in the correct region (requires aws provider >= 5.0)
+  create_bucket_configuration {
+    location_constraint = var.aws_region
+  }
 }
 
+# Enable versioning on the bucket
 resource "aws_s3_bucket_versioning" "versioning" {
-  bucket = local.bucket_name
+  bucket = aws_s3_bucket.canary_artifacts.id
+
   versioning_configuration {
     status = "Enabled"
   }
 }
 
+# Enforce AES256 server-side encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "sse" {
-  bucket = local.bucket_name
+  bucket = aws_s3_bucket.canary_artifacts.id
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
