@@ -1,61 +1,46 @@
-data "aws_iam_policy_document" "assume_synthetics" {
+data "aws_iam_policy_document" "canary_assume" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
+    effect = "Allow"
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
     }
+    actions = ["sts:AssumeRole"]
   }
 }
 
-data "external" "canary_role_lookup" {
-  program = [
-    "bash", "-c",
-    <<-EOC
-      aws iam get-role --role-name ${var.role_name} \
-        --query '{role_name:Role.RoleName, arn:Role.Arn}' \
-        --output json 2>/dev/null || echo '{"role_name": "", "arn": ""}'
-    EOC
-  ]
+resource "aws_iam_role" "canary" {
+  name               = "${var.project_name}-canary-role"
+  assume_role_policy = data.aws_iam_policy_document.canary_assume.json
+  tags               = var.tags
 }
 
-locals {
-  # true if an existing IAM role was found
-  role_exists      = length(data.external.canary_role_lookup.result.role_name) > 0
-
-  # choose existing vs. newly created role
-  canary_role_name = local.role_exists ? data.external.canary_role_lookup.result.role_name : aws_iam_role.canary_role[0].name
-  canary_role_arn  = local.role_exists ? data.external.canary_role_lookup.result.arn      : aws_iam_role.canary_role[0].arn
+resource "aws_iam_role_policy_attachment" "synthetics_core" {
+  role       = aws_iam_role.canary.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
-resource "aws_iam_role" "canary_role" {
-  count             = local.role_exists ? 0 : 1
-  name              = var.role_name
-  assume_role_policy = data.aws_iam_policy_document.assume_synthetics.json
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-data "aws_iam_policy_document" "canary_policy" {
+data "aws_iam_policy_document" "canary_s3" {
   statement {
-    effect    = "Allow"
-    actions   = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-      "synthetics:CreateCanary",
-      "synthetics:StartCanary",
+    effect = "Allow"
+    actions = [
       "s3:GetObject",
+      "s3:ListBucket",
+      "s3:PutObject",
     ]
-    resources = ["*"]
+    resources = [
+      aws_s3_bucket.canary_artifacts.arn,
+      "${aws_s3_bucket.canary_artifacts.arn}/*",
+    ]
   }
 }
 
-resource "aws_iam_role_policy" "canary_policy" {
-  role   = local.canary_role_name
-  policy = data.aws_iam_policy_document.canary_policy.json
+resource "aws_iam_policy" "canary_s3" {
+  name   = "${var.project_name}-canary-s3"
+  policy = data.aws_iam_policy_document.canary_s3.json
+}
+
+resource "aws_iam_role_policy_attachment" "canary_s3_attach" {
+  role       = aws_iam_role.canary.name
+  policy_arn = aws_iam_policy.canary_s3.arn
 }
