@@ -1,6 +1,7 @@
+# 1) Trust policy allowing Synthetics to assume the role
 data "aws_iam_policy_document" "canary_assume" {
   statement {
-    effect    = "Allow"
+    effect = "Allow"
     principals {
       type        = "Service"
       identifiers = ["synthetics.amazonaws.com"]
@@ -9,27 +10,40 @@ data "aws_iam_policy_document" "canary_assume" {
   }
 }
 
+# 2) Execution role for all canaries
 resource "aws_iam_role" "canary" {
   name               = "${local.prefix}-canary-role"
   assume_role_policy = data.aws_iam_policy_document.canary_assume.json
   tags               = local.tags
 }
 
+# 3) AWS-managed policy for core Synthetics permissions
 resource "aws_iam_role_policy_attachment" "synthetics_core" {
   role       = aws_iam_role.canary.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
+# 4) Inline policy granting S3 read/write on the artifact bucket
 data "aws_iam_policy_document" "canary_s3" {
   statement {
     effect    = "Allow"
-    actions   = ["s3:ListBucket", "s3:GetBucketLocation"]
-    resources = [ local.bucket_arn ]
+    actions   = [
+      "s3:ListBucket",
+      "s3:GetBucketLocation"
+    ]
+    resources = [
+      local.bucket_arn
+    ]
   }
   statement {
     effect    = "Allow"
-    actions   = ["s3:PutObject", "s3:GetObject"]
-    resources = [ local.bucket_arn_all ]
+    actions   = [
+      "s3:PutObject",
+      "s3:GetObject"
+    ]
+    resources = [
+      local.bucket_arn_all
+    ]
   }
 }
 
