@@ -14,33 +14,37 @@ env:
   TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
   TF_VAR_schedule_expression: "rate(5 minutes)"
   TF_VAR_additional_tags: '{"Environment":"production"}'
+  TF_LOG: DEBUG  # Enable verbose Terraform logs
 
 jobs:
   monitoring:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: monitoring
+
     steps:
-      - name: Checkout repo
+      - name: 🧾 Checkout repo
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region:            ${{ env.AWS_REGION }}
           aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup Terraform CLI
+      - name: ⚙️ Setup Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: Terraform Init
-        working-directory: monitoring
+      - name: 🔄 Terraform Init
         run: terraform init -upgrade
 
-      - name: Terraform Plan & Apply
-        working-directory: monitoring
-        run: |
-          terraform plan
-          terraform apply -auto-approve
+      - name: 📋 Terraform Plan
+        run: terraform plan
+
+      - name: 🚀 Terraform Apply (with extended lock timeout)
+        run: terraform apply -auto-approve -lock-timeout=300s
