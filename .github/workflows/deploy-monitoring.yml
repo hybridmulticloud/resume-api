@@ -43,19 +43,19 @@ jobs:
 
       - name: Terraform Plan
         working-directory: monitoring
-        run: terraform plan -out=tfplan
+        run: terraform plan -var-file="terraform.tfvars" -out=tfplan
 
       - name: Verify cache directory after plan
         run: |
-          echo "Contents of monitoring/.terraform/cache:"
-          ls -la monitoring/.terraform/cache
+          echo "Contents of monitoring/canaries:"
+          ls -R monitoring/canaries
 
       - name: Upload cache directory artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: terraform-cache
-          path: monitoring/.terraform/cache
+          name: canary-zip-artifacts
+          path: monitoring/canaries/*.zip
 
       - name: Terraform Apply
         working-directory: monitoring
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -input=false tfplan
