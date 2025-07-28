@@ -51,7 +51,7 @@ jobs:
           ls -R monitoring/canaries
 
       - name: Upload cache directory artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: canary-zip-artifacts
           path: monitoring/canaries/*.zip
