@@ -10,7 +10,8 @@ terraform {
       source  = "hashicorp/archive"
       version = ">= 2.1.0"
     }
-
+  }
+  
   backend "remote" {
     organization = "hybridmulticloud"
 
