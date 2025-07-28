@@ -1,4 +1,4 @@
-# package scripts
+# 1) Package local scripts
 data "archive_file" "api_canary" {
   type        = "zip"
   source_dir  = "${path.module}/canaries/api"
@@ -11,27 +11,29 @@ data "archive_file" "homepage_canary" {
   output_path = "${path.module}/canaries/homepage.zip"
 }
 
-# upload to S3
-resource "aws_s3_bucket_object" "api_zip" {
+# 2) Upload zips to S3
+resource "aws_s3_object" "api_zip" {
   bucket = aws_s3_bucket.canary_artifacts.id
   key    = "${local.api_canary_name}.zip"
   source = data.archive_file.api_canary.output_path
+  etag   = filemd5(data.archive_file.api_canary.output_path)
 }
 
-resource "aws_s3_bucket_object" "homepage_zip" {
+resource "aws_s3_object" "homepage_zip" {
   bucket = aws_s3_bucket.canary_artifacts.id
   key    = "${local.homepage_canary_name}.zip"
   source = data.archive_file.homepage_canary.output_path
+  etag   = filemd5(data.archive_file.homepage_canary.output_path)
 }
 
-# deploy canaries
+# 3) Deploy the API canary
 resource "aws_synthetics_canary" "api" {
   name                 = local.api_canary_name
   execution_role_arn   = aws_iam_role.canary.arn
   runtime_version      = "syn-nodejs-puppeteer-3.6"
   handler              = "index.handler"
   s3_bucket            = aws_s3_bucket.canary_artifacts.id
-  s3_key               = aws_s3_bucket_object.api_zip.key
+  s3_key               = aws_s3_object.api_zip.key
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.id}/api"
 
   schedule {
@@ -45,13 +47,14 @@ resource "aws_synthetics_canary" "api" {
   tags = local.tags
 }
 
+# 4) Deploy the Homepage canary
 resource "aws_synthetics_canary" "homepage" {
   name                 = local.homepage_canary_name
   execution_role_arn   = aws_iam_role.canary.arn
   runtime_version      = "syn-python-selenium-1.0"
   handler              = "pageLoadBlueprint.handler"
   s3_bucket            = aws_s3_bucket.canary_artifacts.id
-  s3_key               = aws_s3_bucket_object.homepage_zip.key
+  s3_key               = aws_s3_object.homepage_zip.key
   artifact_s3_location = "s3://${aws_s3_bucket.canary_artifacts.id}/homepage"
 
   schedule {
