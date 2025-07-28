@@ -17,6 +17,9 @@ resource "aws_s3_bucket" "canary_artifacts" {
   count  = local.create_bucket ? 1 : 0
   bucket = local.bucket_name
   tags   = local.tags
+   create_bucket_configuration {
+     location_constraint = var.aws_region
+   }
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
