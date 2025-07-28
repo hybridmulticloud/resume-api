@@ -5,34 +5,19 @@ variable "project_name" {
 }
 
 variable "aws_region" {
-  description = "The AWS region to operate in"
+  description = "AWS region"
   type        = string
-  default     = "us-east-1"   # adjust as needed
-}
-
-variable "api_canary_name" {
-  description = "Name of the API synthetics canary"
-  type        = string
-  default     = "${var.project_name}-api-canary"
-}
-
-variable "homepage_canary_name" {
-  description = "Name of the homepage synthetics canary"
-  type        = string
-  default     = "${var.project_name}-homepage-canary"
+  default     = "us-east-1"
 }
 
 variable "schedule_expression" {
-  description = "CloudWatch Schedule Expression (rate or cron) for canaries"
+  description = "CloudWatch schedule (rate or cron)"
   type        = string
   default     = "rate(5 minutes)"
 }
 
-variable "tags" {
-  description = "Common tags to apply to all resources"
+variable "additional_tags" {
+  description = "Extra tags to merge with the default ones"
   type        = map(string)
-  default = {
-    Project     = var.project_name
-    Environment = "production"
-  }
+  default     = {}
 }
