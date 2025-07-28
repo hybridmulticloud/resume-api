@@ -1,25 +1,24 @@
+# 1) Probe existence via AWS CLI
 data "external" "bucket_exists" {
-  program = ["bash", "-c", <<-EOF
-    if aws s3api head-bucket --bucket ${local.bucket_name} 2>/dev/null; then
-      echo '{"exists":"true"}'
-    else
-      echo '{"exists":"false"}'
-    fi
-EOF
+  program = [
+    "bash", "-c", <<-EOF
+      if aws s3api head-bucket --bucket ${local.bucket_name} 2>/dev/null; then
+        echo '{"exists":"true"}'
+      else
+        echo '{"exists":"false"}'
+      fi
+    EOF
   ]
 }
 
-locals {
-  create_bucket = data.external.bucket_exists.result.exists == "false"
-}
-
+# 2) Conditionally create only if missing
 resource "aws_s3_bucket" "canary_artifacts" {
   count  = local.create_bucket ? 1 : 0
   bucket = local.bucket_name
-  acl    = "private"
   tags   = local.tags
 }
 
+# 3) Always enforce versioning & encryption on that name
 resource "aws_s3_bucket_versioning" "canary_artifacts_versioning" {
   bucket = local.bucket_name
 
