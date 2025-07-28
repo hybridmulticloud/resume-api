@@ -3,6 +3,9 @@ data "aws_caller_identity" "current" {}
 locals {
   prefix               = var.project_name
   bucket_name          = "${local.prefix}-${data.aws_caller_identity.current.account_id}-canary-artifacts"
+  bucket_arn           = "arn:aws:s3:::${local.bucket_name}"
+  bucket_arn_all       = "${local.bucket_arn}/*"
+
   api_canary_name      = "${local.prefix}-api-canary"
   homepage_canary_name = "${local.prefix}-homepage-canary"
 
