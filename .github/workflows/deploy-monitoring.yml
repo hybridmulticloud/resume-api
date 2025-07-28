@@ -14,7 +14,8 @@ env:
   TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
   TF_VAR_schedule_expression: "rate(5 minutes)"
   TF_VAR_additional_tags: '{"Environment":"production"}'
-  TF_LOG: DEBUG  # Enable verbose Terraform logs
+  TF_LOG: TRACE  # Extra verbose logging for debugging
+  TF_LOG_PATH: terraform_debug.log
 
 jobs:
   monitoring:
@@ -40,11 +41,30 @@ jobs:
         with:
           terraform_version: "1.5.7"
 
+      - name: 📦 Pre-Import Existing Bucket
+        run: |
+          if aws s3api head-bucket --bucket resume-api-***-canary-artifacts 2>/dev/null; then
+            echo "Bucket already exists. Importing..."
+            terraform import aws_s3_bucket.canary_artifacts resume-api-***-canary-artifacts || true
+          else
+            echo "Bucket not found. Proceeding normally."
+          fi
+
       - name: 🔄 Terraform Init
         run: terraform init -upgrade
 
-      - name: 📋 Terraform Plan
-        run: terraform plan
+      - name: 🔍 Refresh Terraform State
+        run: terraform refresh
 
-      - name: 🚀 Terraform Apply (with extended lock timeout)
-        run: terraform apply -auto-approve -lock-timeout=300s
+      - name: 📋 Terraform Plan
+        run: terraform plan -input=false -no-color
+
+      - name: 🚀 Terraform Apply
+        run: terraform apply -auto-approve -input=false -no-color -lock-timeout=300s
+
+      - name: 🧾 Terraform Output
+        run: terraform output || echo "No outputs returned."
+
+      - name: 🐛 Print Debug Log on Failure
+        if: failure()
+        run: cat monitoring/terraform_debug.log || echo "No debug log found."
