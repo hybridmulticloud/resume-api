@@ -13,9 +13,6 @@ env:
   TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
   TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
   TF_VAR_additional_tags:    '{"Environment":"production"}'
-
-  # ← Store just your account‐ID (or canary suffix) as a secret,
-  #    then build the full bucket name here
   AWS_ACCOUNT_ID:            ${{ secrets.AWS_ACCOUNT_ID }}
   S3_BUCKET_NAME:            resume-api-${{ env.AWS_ACCOUNT_ID }}-canary-artifacts
 
