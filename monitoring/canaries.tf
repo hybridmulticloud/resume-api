@@ -40,10 +40,6 @@ resource "aws_synthetics_canary" "api" {
     expression = var.schedule_expression
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
   tags = local.tags
 }
 
