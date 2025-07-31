@@ -1,7 +1,3 @@
-locals {
-  tags = var.additional_tags
-}
-
 data "aws_iam_policy_document" "canary_assume" {
   statement {
     effect = "Allow"
