@@ -5,7 +5,7 @@ data "aws_iam_policy_document" "canary_assume" {
       type        = "Service"
       identifiers = [
         "synthetics.amazonaws.com",
-        "lambda.amazonaws.com"
+        "lambda.amazonaws.com",
       ]
     }
     actions = ["sts:AssumeRole"]
@@ -19,9 +19,9 @@ resource "aws_iam_role" "canary" {
 }
 
 resource "aws_iam_policy" "canary_s3" {
-  name = "resume-api-canary-s3-policy"
+  name   = "resume-api-canary-s3-policy"
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [
       {
         Sid    = "S3FullLifecycleForCanaryArtifacts"
@@ -64,6 +64,12 @@ resource "aws_iam_policy" "canary_s3" {
           "s3:PutObjectAcl",
         ]
         Resource = ["arn:aws:s3:::cw-syn-results-*/*"]
+      },
+      {
+        Sid    = "LambdaPublishVersion"
+        Effect = "Allow"
+        Action = ["lambda:PublishVersion"]
+        Resource = ["arn:aws:lambda:*:*:function:cwsyn-resume-api-*"]
       },
     ]
   })
