@@ -1,51 +1,54 @@
-# 1) Trust policy for Synthetics service
-data "aws_iam_policy_document" "canary_assume" {
-  statement {
-    effect = "Allow"
-    principals {
-      type        = "Service"
-      identifiers = ["synthetics.amazonaws.com"]
-    }
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-# 2) Execution role for canaries
-resource "aws_iam_role" "canary" {
-  name               = "${local.prefix}-canary-role"
-  assume_role_policy = data.aws_iam_policy_document.canary_assume.json
-  tags               = local.tags
-}
-
-# 3) Attach AWS-managed Synthetics policy
-resource "aws_iam_role_policy_attachment" "synthetics_core" {
-  role       = aws_iam_role.canary.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
-}
-
-# 4) Inline policy granting S3 access to the artifacts bucket
-data "aws_iam_policy_document" "canary_s3" {
-  statement {
-    effect    = "Allow"
-    actions   = [
-      "s3:ListBucket",
-      "s3:GetBucketLocation"
-    ]
-    resources = [ local.bucket_arn ]
-  }
-  statement {
-    effect    = "Allow"
-    actions   = [
-      "s3:PutObject",
-      "s3:GetObject"
-    ]
-    resources = [ local.bucket_arn_all ]
-  }
-}
-
 resource "aws_iam_policy" "canary_s3" {
-  name   = "${local.prefix}-canary-s3-policy"
-  policy = data.aws_iam_policy_document.canary_s3.json
+  name = "resume-api-canary-s3-policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3FullLifecycleForCanaryArtifacts"
+        Effect = "Allow"
+        Action = [
+          "s3:Get*",
+          "s3:List*",
+          "s3:PutBucketAcl",
+          "s3:PutBucketCors",
+          "s3:PutBucketPolicy",
+          "s3:PutBucketWebsite",
+          "s3:PutBucketVersioning",
+          "s3:PutBucketTagging",
+          "s3:PutBucketLogging",
+          "s3:PutEncryptionConfiguration",
+          "s3:PutObject",
+        ]
+        Resource = [
+          "arn:aws:s3:::resume-api-*-canary-artifacts",
+          "arn:aws:s3:::resume-api-*-canary-artifacts/*",
+        ]
+      },
+      {
+        Sid    = "S3ReadCanaryLibraries"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+        ]
+        Resource = [
+          "arn:aws:s3:::aws-synthetics-library-*",
+          "arn:aws:s3:::aws-synthetics-library-*/*",
+        ]
+      },
+      {
+        Sid    = "S3WriteResults"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+        ]
+        Resource = [
+          "arn:aws:s3:::cw-syn-results-*/*",
+        ]
+      },
+    ]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "canary_s3_attach" {
