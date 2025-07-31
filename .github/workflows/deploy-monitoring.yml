@@ -58,7 +58,3 @@ jobs:
 
       - name: Terraform Output
         run: terraform output || echo "No outputs returned."
-
-      - name: Print Debug Log on Failure
-        if: failure()
-        run: cat terraform_debug.log || echo "No debug log found."
