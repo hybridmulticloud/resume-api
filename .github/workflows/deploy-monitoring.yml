@@ -50,15 +50,6 @@ jobs:
           terraform version
           terraform providers
 
-      - name: Import existing S3 bucket (one-time)
-        run: |
-          if aws s3api head-bucket --bucket "${{ env.S3_BUCKET_NAME }}" 2>/dev/null; then
-            echo "Bucket exists; importing into Terraform state..."
-            terraform import -lock=false aws_s3_bucket.canary_artifacts "${{ env.S3_BUCKET_NAME }}"
-          else
-            echo "Bucket not found; Terraform will create it."
-          fi
-
       - name: Terraform Plan
         run: terraform plan -input=false -no-color
 
