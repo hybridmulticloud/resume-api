@@ -61,9 +61,5 @@ resource "aws_synthetics_canary" "homepage" {
     expression = var.schedule_expression
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
   tags = local.tags
 }
