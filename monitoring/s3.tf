@@ -1,6 +1,12 @@
+locals {
+  bucket_name = var.bucket_name
+  tags = var.additional_tags
+}
+
 resource "aws_s3_bucket" "canary_artifacts" {
   bucket = local.bucket_name
   tags   = local.tags
+  wait_for_bucket = true
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
