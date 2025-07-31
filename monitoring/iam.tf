@@ -1,7 +1,28 @@
+locals {
+  tags = var.additional_tags
+}
+
+data "aws_iam_policy_document" "canary_assume" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["synthetics.amazonaws.com"]
+    }
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "canary" {
+  name               = "resume-api-canary-role"
+  assume_role_policy = data.aws_iam_policy_document.canary_assume.json
+  tags               = local.tags
+}
+
 resource "aws_iam_policy" "canary_s3" {
   name = "resume-api-canary-s3-policy"
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
         Sid    = "S3FullLifecycleForCanaryArtifacts"
@@ -43,12 +64,15 @@ resource "aws_iam_policy" "canary_s3" {
           "s3:PutObject",
           "s3:PutObjectAcl",
         ]
-        Resource = [
-          "arn:aws:s3:::cw-syn-results-*/*",
-        ]
+        Resource = ["arn:aws:s3:::cw-syn-results-*/*"]
       },
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "synthetics_full" {
+  role       = aws_iam_role.canary.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "canary_s3_attach" {
