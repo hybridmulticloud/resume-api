@@ -14,7 +14,7 @@ resource "null_resource" "bucket_ready" {
         fi
         sleep 2
       done
-      echo "Bucket did not become ready in time" >&2
+      echo "Bucket never became ready" >&2
       exit 1
     EOT
   }
