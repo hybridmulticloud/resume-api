@@ -30,22 +30,27 @@ jobs:
       - name: 🧾 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🔐 Configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region:            ${{ env.AWS_REGION }}
           aws-access-key-id:     ${{ secrets.MONITORING_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.MONITORING_AWS_SECRET_ACCESS_KEY }}
 
-      - name: ⚙️ Setup Terraform CLI
+      - name: Setup Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.7"
 
-      - name: 🔄 Terraform Init
+      - name: Terraform Init
         run: terraform init -upgrade
 
-      - name: 📦 Import existing S3 bucket (one-time)
+      - name: Show Terraform & Provider versions
+        run: |
+          terraform version
+          terraform providers
+
+      - name: Import existing S3 bucket (one-time)
         run: |
           if aws s3api head-bucket --bucket "${{ env.S3_BUCKET_NAME }}" 2>/dev/null; then
             echo "Bucket exists; importing into Terraform state..."
@@ -54,15 +59,15 @@ jobs:
             echo "Bucket not found; Terraform will create it."
           fi
 
-      - name: 🔍 Terraform Plan
+      - name: Terraform Plan
         run: terraform plan -input=false -no-color
 
-      - name: 🚀 Terraform Apply
+      - name: Terraform Apply
         run: terraform apply -auto-approve -input=false -no-color -lock-timeout=300s
 
-      - name: 🧾 Terraform Output
+      - name: Terraform Output
         run: terraform output || echo "No outputs returned."
 
-      - name: 🐛 Print Debug Log on Failure
+      - name: Print Debug Log on Failure
         if: failure()
         run: cat terraform_debug.log || echo "No debug log found."
