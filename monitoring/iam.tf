@@ -1,9 +1,12 @@
 data "aws_iam_policy_document" "canary_assume" {
   statement {
-    effect    = "Allow"
+    effect = "Allow"
     principals {
       type        = "Service"
-      identifiers = ["synthetics.amazonaws.com"]
+      identifiers = [
+        "synthetics.amazonaws.com",
+        "lambda.amazonaws.com"
+      ]
     }
     actions = ["sts:AssumeRole"]
   }
