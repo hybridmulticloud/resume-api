@@ -11,26 +11,29 @@ data "archive_file" "homepage_canary" {
 }
 
 resource "aws_s3_object" "api_zip" {
-  bucket = local.bucket_name
-  key    = "${local.api_canary_name}.zip"
-  source = data.archive_file.api_canary.output_path
-  etag   = filemd5(data.archive_file.api_canary.output_path)
+  depends_on = [null_resource.bucket_ready]
+  bucket     = local.bucket_name
+  key        = "${local.api_canary_name}.zip"
+  source     = data.archive_file.api_canary.output_path
+  etag       = filemd5(data.archive_file.api_canary.output_path)
 }
 
 resource "aws_s3_object" "homepage_zip" {
-  bucket = local.bucket_name
-  key    = "${local.homepage_canary_name}.zip"
-  source = data.archive_file.homepage_canary.output_path
-  etag   = filemd5(data.archive_file.homepage_canary.output_path)
+  depends_on = [null_resource.bucket_ready]
+  bucket     = local.bucket_name
+  key        = "${local.homepage_canary_name}.zip"
+  source     = data.archive_file.homepage_canary.output_path
+  etag       = filemd5(data.archive_file.homepage_canary.output_path)
 }
 
 resource "aws_synthetics_canary" "api" {
-  name                 = local.api_canary_name
-  execution_role_arn   = aws_iam_role.canary.arn
-  runtime_version      = "syn-nodejs-puppeteer-3.6"
-  handler              = "index.handler"
-  s3_bucket            = local.bucket_name
-  s3_key               = aws_s3_object.api_zip.key
+  depends_on          = [aws_s3_object.api_zip]
+  name                = local.api_canary_name
+  execution_role_arn  = aws_iam_role.canary.arn
+  runtime_version     = "syn-nodejs-puppeteer-3.6"
+  handler             = "index.handler"
+  s3_bucket           = local.bucket_name
+  s3_key              = aws_s3_object.api_zip.key
   artifact_s3_location = "s3://${local.bucket_name}/api"
 
   schedule {
@@ -45,12 +48,13 @@ resource "aws_synthetics_canary" "api" {
 }
 
 resource "aws_synthetics_canary" "homepage" {
-  name                 = local.homepage_canary_name
-  execution_role_arn   = aws_iam_role.canary.arn
-  runtime_version      = "syn-python-selenium-1.0"
-  handler              = "pageLoadBlueprint.handler"
-  s3_bucket            = local.bucket_name
-  s3_key               = aws_s3_object.homepage_zip.key
+  depends_on          = [aws_s3_object.homepage_zip]
+  name                = local.homepage_canary_name
+  execution_role_arn  = aws_iam_role.canary.arn
+  runtime_version     = "syn-python-selenium-1.0"
+  handler             = "pageLoadBlueprint.handler"
+  s3_bucket           = local.bucket_name
+  s3_key              = aws_s3_object.homepage_zip.key
   artifact_s3_location = "s3://${local.bucket_name}/homepage"
 
   schedule {
