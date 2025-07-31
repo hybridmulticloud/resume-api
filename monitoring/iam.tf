@@ -84,3 +84,24 @@ resource "aws_iam_role_policy_attachment" "canary_s3_attach" {
   role       = aws_iam_role.canary.name
   policy_arn = aws_iam_policy.canary_s3.arn
 }
+resource "aws_iam_policy" "lambda_add_permission" {
+  name        = "resume-api-lambda-add-permission"
+  description = "Allows canary to add permissions to Lambda functions"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "lambda:AddPermission"
+        ],
+        Resource = "arn:aws:lambda:*:*:function:*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_add_permission_attach" {
+  role       = aws_iam_role.canary.name
+  policy_arn = aws_iam_policy.lambda_add_permission.arn
+}
