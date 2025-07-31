@@ -12,10 +12,10 @@ env:
   TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
   TF_VAR_aws_region:         ${{ secrets.AWS_REGION }}
   TF_VAR_alert_email:        ${{ secrets.ALERT_EMAIL_ADDRESS }}
+  TF_VAR_schedule_expression: "rate(5 minutes)"
   TF_VAR_additional_tags:    '{"Environment":"production"}'
   AWS_ACCOUNT_ID:            ${{ secrets.AWS_ACCOUNT_ID }}
-  S3_BUCKET_NAME:            resume-api-${{ env.AWS_ACCOUNT_ID }}-canary-artifacts
-
+  S3_BUCKET_NAME:            resume-api-${{ secrets.AWS_ACCOUNT_ID }}-canary-artifacts
   TF_LOG:                    TRACE
   TF_LOG_PATH:               terraform_debug.log
 
@@ -48,7 +48,7 @@ jobs:
       - name: 📦 Import existing S3 bucket (one-time)
         run: |
           if aws s3api head-bucket --bucket "${{ env.S3_BUCKET_NAME }}" 2>/dev/null; then
-            echo "Bucket exists; importing into Terraform state…"
+            echo "Bucket exists; importing into Terraform state..."
             terraform import -lock=false aws_s3_bucket.canary_artifacts "${{ env.S3_BUCKET_NAME }}"
           else
             echo "Bucket not found; Terraform will create it."
