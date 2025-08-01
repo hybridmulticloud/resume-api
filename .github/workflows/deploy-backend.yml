@@ -115,7 +115,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_s3_bucket\.frontend$"; then
             terraform import aws_s3_bucket.frontend "$BUCKET"
           else
-            echo "✅ aws_s3_bucket.frontend already in state"
+            echo "aws_s3_bucket.frontend already in state"
           fi
 
       - name: Import S3 public access block if missing
@@ -124,7 +124,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_s3_bucket_public_access_block\.frontend$"; then
             terraform import aws_s3_bucket_public_access_block.frontend "$BUCKET"
           else
-            echo "✅ aws_s3_bucket_public_access_block.frontend already in state"
+            echo "aws_s3_bucket_public_access_block.frontend already in state"
           fi
 
       - name: Import CloudFront OAC if missing
@@ -134,7 +134,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_cloudfront_origin_access_control\.frontend_oac$"; then
             terraform import aws_cloudfront_origin_access_control.frontend_oac "$OAC_ID"
           else
-            echo "✅ aws_cloudfront_origin_access_control.frontend_oac already in state"
+            echo "aws_cloudfront_origin_access_control.frontend_oac already in state"
           fi
 
       - name: Import CloudFront distribution if missing
@@ -144,7 +144,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_cloudfront_distribution\.frontend$"; then
             terraform import aws_cloudfront_distribution.frontend "$DIST_ID"
           else
-            echo "✅ aws_cloudfront_distribution.frontend already in state"
+            echo "aws_cloudfront_distribution.frontend already in state"
           fi
 
       - name: Import S3 bucket policy if missing
@@ -153,7 +153,7 @@ jobs:
           if ! terraform state list | grep -q "^aws_s3_bucket_policy\.frontend$"; then
             terraform import aws_s3_bucket_policy.frontend "$BUCKET"
           else
-            echo "✅ aws_s3_bucket_policy.frontend already in state"
+            echo "aws_s3_bucket_policy.frontend already in state"
           fi
 
       - name: Import Route53 A record if missing
@@ -163,5 +163,5 @@ jobs:
           if ! terraform state list | grep -q "^aws_route53_record\.frontend_alias$"; then
             terraform import aws_route53_record.frontend_alias "${ZONE_ID}_${BUCKET}_A"
           else
-            echo "✅ aws_route53_record.frontend_alias already in state"
+            echo "aws_route53_record.frontend_alias already in state"
           fi
