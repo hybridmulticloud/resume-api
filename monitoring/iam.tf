@@ -21,11 +21,11 @@ resource "aws_iam_role" "canary" {
 resource "aws_iam_policy" "canary_s3" {
   name   = "resume-api-canary-s3-policy"
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Sid    = "S3FullLifecycleForCanaryArtifacts"
-        Effect = "Allow"
+        Sid    = "S3FullLifecycleForCanaryArtifacts",
+        Effect = "Allow",
         Action = [
           "s3:Get*",
           "s3:List*",
@@ -37,40 +37,46 @@ resource "aws_iam_policy" "canary_s3" {
           "s3:PutBucketTagging",
           "s3:PutBucketLogging",
           "s3:PutEncryptionConfiguration",
-          "s3:PutObject",
-        ]
+          "s3:PutObject"
+        ],
         Resource = [
           "arn:aws:s3:::resume-api-*-canary-artifacts",
-          "arn:aws:s3:::resume-api-*-canary-artifacts/*",
+          "arn:aws:s3:::resume-api-*-canary-artifacts/*"
         ]
       },
       {
-        Sid    = "S3ReadCanaryLibraries"
-        Effect = "Allow"
+        Sid    = "S3ReadCanaryLibraries",
+        Effect = "Allow",
         Action = [
           "s3:GetObject",
-          "s3:GetObjectVersion",
-        ]
+          "s3:GetObjectVersion"
+        ],
         Resource = [
           "arn:aws:s3:::aws-synthetics-library-*",
-          "arn:aws:s3:::aws-synthetics-library-*/*",
+          "arn:aws:s3:::aws-synthetics-library-*/*"
         ]
       },
       {
-        Sid    = "S3WriteResults"
-        Effect = "Allow"
+        Sid    = "S3WriteResults",
+        Effect = "Allow",
         Action = [
           "s3:PutObject",
-          "s3:PutObjectAcl",
-        ]
+          "s3:PutObjectAcl"
+        ],
         Resource = ["arn:aws:s3:::cw-syn-results-*/*"]
       },
       {
-        Sid    = "LambdaPublishVersion"
-        Effect = "Allow"
-        Action = ["lambda:PublishVersion"]
+        Sid    = "LambdaPublishVersion",
+        Effect = "Allow",
+        Action = ["lambda:PublishVersion"],
         Resource = ["arn:aws:lambda:*:*:function:cwsyn-resume-api-*"]
       },
+      {
+        Sid    = "LambdaAddPermissionForCanaries",
+        Effect = "Allow",
+        Action = ["lambda:AddPermission"],
+        Resource = ["arn:aws:lambda:*:*:function:cwsyn-resume-api-*"]
+      }
     ]
   })
 }
@@ -83,25 +89,4 @@ resource "aws_iam_role_policy_attachment" "synthetics_full" {
 resource "aws_iam_role_policy_attachment" "canary_s3_attach" {
   role       = aws_iam_role.canary.name
   policy_arn = aws_iam_policy.canary_s3.arn
-}
-resource "aws_iam_policy" "lambda_add_permission" {
-  name        = "resume-api-lambda-add-permission"
-  description = "Allows canary to add permissions to Lambda functions"
-  policy      = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = [
-          "lambda:AddPermission"
-        ],
-        Resource = "arn:aws:lambda:*:*:function:*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_add_permission_attach" {
-  role       = aws_iam_role.canary.name
-  policy_arn = aws_iam_policy.lambda_add_permission.arn
 }
